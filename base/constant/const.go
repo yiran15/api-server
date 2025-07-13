@@ -1,7 +1,9 @@
 package constant
 
+type UserContextKey struct{}
+
 const (
-	RequestID           = "requestID"
-	DefaultRedisIncrKey = "machine_id"
 	AuthMidwareKey      = "user"
+	RequestIDHeader     = "X-Request-Id"
+	RequestIDContextKey = "requestID"
 )

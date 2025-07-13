@@ -7,7 +7,12 @@ import (
 	"github.com/yiran15/api-server/model"
 	"github.com/yiran15/api-server/store"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
+
+type Test struct {
+	gorm.Model
+}
 
 var (
 	ctx   = context.Background()
@@ -85,5 +90,11 @@ func TestTX(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatalf("failed to transaction: %v", err)
+	}
+}
+
+func TestCreateTable(t *testing.T) {
+	if err := db.AutoMigrate(&Test{}); err != nil {
+		t.Fatalf("failed to create table: %v", err)
 	}
 }

@@ -1,0 +1,156 @@
+package controller
+
+import (
+	"context"
+	"errors"
+	"io"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-sql-driver/mysql"
+	"github.com/yiran15/api-server/base/constant"
+	"gorm.io/gorm"
+)
+
+type bindType int
+
+const (
+	bindTypeUri bindType = iota
+	bindTypeJson
+	bindTypeQuery
+	bindTypeShouldBind
+)
+
+func bindWithSources(c *gin.Context, req any, sources ...bindType) (success bool) {
+	for _, src := range sources {
+		var err error
+		switch src {
+		case bindTypeUri:
+			err = c.ShouldBindUri(req)
+		case bindTypeJson:
+			err = c.ShouldBindJSON(req)
+		case bindTypeQuery:
+			err = c.ShouldBindQuery(req)
+		case bindTypeShouldBind:
+			err = c.ShouldBind(req)
+		default:
+			continue
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				responseParamError(c, err, "request body is empty")
+				return false
+			}
+			responseParamError(c, err, err.Error())
+			return false
+		}
+	}
+
+	errMsg, err := validate.CheckReq(c.Request.Context(), req)
+	if err != nil {
+		responseParamError(c, err, errMsg)
+		return false
+	}
+	if len(errMsg) > 0 {
+		responseParamError(c, errors.New("parameter error"), errMsg)
+		return false
+	}
+	return true
+}
+
+type HandlerData[T any, R any] func(ctx context.Context, req *T) (R, error)
+
+func ResponseWithData[T any, R any](c *gin.Context, handler HandlerData[T, R], bindType ...bindType) {
+	var (
+		data R
+		err  error
+	)
+	req := new(T)
+	if !bindWithSources(c, req, bindType...) {
+		return
+	}
+
+	if data, err = handler(c.Request.Context(), req); err != nil {
+		responseError(c, err)
+		return
+	}
+
+	responseSuccess(c, data)
+}
+
+type HandlerErr[T any] func(ctx context.Context, req *T) error
+
+func ResponseOnlySuccess[T any](c *gin.Context, handler HandlerErr[T], bindTypes ...bindType) {
+	req := new(T)
+	if !bindWithSources(c, req, bindTypes...) {
+		return
+	}
+
+	if err := handler(c.Request.Context(), req); err != nil {
+		responseError(c, err)
+		return
+	}
+
+	responseSuccess(c, nil)
+}
+
+func responseError(c *gin.Context, err error) {
+	code, err := getErr(err)
+	c.JSON(code, gin.H{
+		"code":      code,
+		"error":     err.Error(),
+		"requestId": c.GetString(constant.RequestIDContextKey),
+	})
+	_ = c.Error(err)
+}
+
+func responseSuccess(c *gin.Context, data any) {
+	res := gin.H{
+		"code": 0,
+		"msg":  "success",
+	}
+	if data != nil {
+		res["data"] = data
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func responseParamError(c *gin.Context, err error, errMsg string) {
+	c.JSON(http.StatusBadRequest, gin.H{
+		"code":      http.StatusBadRequest,
+		"msg":       "parameter error",
+		"error":     errMsg,
+		"requestId": c.GetString(constant.RequestIDContextKey),
+	})
+	_ = c.Error(err)
+}
+
+func getErr(err error) (int, error) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return http.StatusNotFound, errors.New("object not found")
+	}
+
+	if code, ok, err := mysqlErr(err); ok {
+		return code, err
+	}
+
+	return defaultErr(err)
+}
+
+func mysqlErr(err error) (int, bool, error) {
+	mysqlErr, ok := err.(*mysql.MySQLError)
+	if !ok {
+		return 0, false, err
+	}
+
+	switch mysqlErr.Number {
+	case 1062:
+		return http.StatusBadRequest, true, errors.New("object already exists")
+	default:
+		return http.StatusInternalServerError, true, err
+	}
+}
+
+func defaultErr(err error) (int, error) {
+	return http.StatusInternalServerError, err
+}

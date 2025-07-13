@@ -15,7 +15,7 @@ import (
 	"github.com/yiran15/api-server/controller"
 	"github.com/yiran15/api-server/pkg/casbin"
 	"github.com/yiran15/api-server/pkg/jwt"
-	"github.com/yiran15/api-server/service"
+	"github.com/yiran15/api-server/service/v1"
 	"github.com/yiran15/api-server/store"
 )
 
@@ -28,24 +28,51 @@ func InitApplication() (*app.Application, func(), error) {
 	}
 	dbProvider := store.NewDBProvider(db)
 	userStorer := store.NewUserStore(dbProvider)
-	userServicer := service.NewUserService(userStorer)
-	userController := controller.NewUserController(userServicer)
+	roleStorer := store.NewRoleStore(dbProvider)
+	client, err := data.NewRDB()
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	cacheStore, cleanup2, err := store.NewCacheStore(client)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	txManager := store.NewTxManager(db)
 	generateToken, err := jwt.NewGenerateToken()
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
+	userServicer := v1.NewUserService(userStorer, roleStorer, cacheStore, txManager, generateToken)
+	userController := controller.NewUserController(userServicer)
+	apiStorer := store.NewApiStore(dbProvider)
+	casbinStorer := store.NewCasbinStore(dbProvider)
 	enforcer, err := casbin.NewEnforcer(db)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
+	casbinManager := casbin.NewCasbinManager(enforcer)
+	roleServicer := v1.NewRoleService(roleStorer, apiStorer, casbinStorer, casbinManager, txManager)
+	roleController := controller.NewRoleController(roleServicer)
+	apiServicer := v1.NewApiServicer(apiStorer)
+	apiController := controller.NewApiController(apiServicer)
 	authChecker := casbin.NewAuthChecker(enforcer)
-	middlewareMiddleware := middleware.NewMiddleware(generateToken, authChecker)
-	routerRouter := router.NewRouter(userController, middlewareMiddleware)
-	engine := server.NewHttpServer(routerRouter)
+	middlewareMiddleware := middleware.NewMiddleware(generateToken, authChecker, cacheStore)
+	routerRouter := router.NewRouter(userController, roleController, apiController, middlewareMiddleware)
+	engine, err := server.NewHttpServer(routerRouter)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	application := app.NewApplication(engine)
 	return application, func() {
+		cleanup2()
 		cleanup()
 	}, nil
 }

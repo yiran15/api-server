@@ -1,0 +1,17 @@
+services:
+  apiserver:
+    image: ${IMAGE}
+    restart: always
+    container_name: apiserver
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://10.10.10.10:30001
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=api-server
+      # - OTEL_METRICS_EXPORTER=prometheus
+      # - OTEL_EXPORTER_PROMETHEUS_PORT=9464
+      # - OTEL_EXPORTER_PROMETHEUS_HOST=0.0.0.0
+    ports:
+    - 8080:8080
+    volumes:
+      - ./config.yaml:/app/config.yaml

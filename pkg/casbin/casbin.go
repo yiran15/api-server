@@ -24,7 +24,7 @@ g = _, _
 e = some(where (p.eft == allow))
 
 [matchers]
-m = g(r.sub, p.sub) && keyMatch2(r.obj, p.obj) && r.act == p.act || r.sub == "root"`
+m = g(r.sub, p.sub) && keyMatch2(r.obj, p.obj) && keyMatch(r.act, p.act)`
 
 func NewEnforcer(db *gorm.DB) (enforcer *casbin.Enforcer, err error) {
 	model, err := model.NewModelFromString(casbinModel)

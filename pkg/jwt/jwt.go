@@ -13,6 +13,7 @@ import (
 type JwtInterface interface {
 	GenerateToken(id int64, userName string) (token string, err error)
 	ParseToken(tokenString string) (jwtClaims *JwtClaims, err error)
+	GetUser(ctx context.Context) (*JwtClaims, error)
 }
 
 type GenerateToken struct {
@@ -64,12 +65,12 @@ func newJwtClaims(userID int64, userName, issuer string, expire time.Duration) *
 	}
 }
 
-func (c *GenerateToken) GenerateToken(id int64, userName string) (token string, err error) {
-	jwtClaims := newJwtClaims(id, userName, c.issuer, c.expire)
+func (j *GenerateToken) GenerateToken(id int64, userName string) (token string, err error) {
+	jwtClaims := newJwtClaims(id, userName, j.issuer, j.expire)
 
 	claims := jwtv5.NewWithClaims(jwtv5.SigningMethodHS256, jwtClaims)
 
-	token, err = claims.SignedString([]byte(c.secret))
+	token, err = claims.SignedString([]byte(j.secret))
 	if err != nil {
 		return "", errors.New("generate token failed")
 	}
@@ -77,10 +78,10 @@ func (c *GenerateToken) GenerateToken(id int64, userName string) (token string, 
 }
 
 // ParseToken 解析token
-func (c *GenerateToken) ParseToken(tokenString string) (jwtClaims *JwtClaims, err error) {
+func (j *GenerateToken) ParseToken(tokenString string) (jwtClaims *JwtClaims, err error) {
 	jwtClaims = &JwtClaims{}
 	token, err := jwtv5.ParseWithClaims(tokenString, jwtClaims, func(token *jwtv5.Token) (interface{}, error) {
-		return []byte(c.secret), nil
+		return []byte(j.secret), nil
 	})
 	if err != nil {
 		return nil, errors.New("parse token failed")
@@ -91,8 +92,8 @@ func (c *GenerateToken) ParseToken(tokenString string) (jwtClaims *JwtClaims, er
 	return nil, errors.New("parse token failed")
 }
 
-func GetJwtClaimsByCtx(ctx context.Context) (*JwtClaims, error) {
-	cl := ctx.Value(constant.AuthMidwareKey)
+func (j *GenerateToken) GetUser(ctx context.Context) (*JwtClaims, error) {
+	cl := ctx.Value(constant.UserContextKey{})
 	if cl == nil {
 		return nil, errors.New("get jwt claims by ctx failed")
 	}

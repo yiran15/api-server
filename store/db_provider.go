@@ -52,6 +52,9 @@ func (d *DBProvider) getDB(ctx context.Context, model any, opts ...Option) (db *
 
 	// 应用所有 GORM 选项
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		db = opt(db)
 	}
 	return db.WithContext(ctx) // 将上下文绑定到 DB 实例，确保上下文取消时数据库操作也能终止
