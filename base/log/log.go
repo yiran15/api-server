@@ -1,9 +1,11 @@
 package log
 
 import (
+	"context"
 	"os"
 
 	"github.com/yiran15/api-server/base/conf"
+	"github.com/yiran15/api-server/base/constant"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -45,4 +47,19 @@ func NewLogger() {
 	if logLevel == zap.DebugLevel {
 		zap.L().Debug("log initialization successful", zap.String("level", logLevelStr))
 	}
+}
+
+func GetRequestID(c context.Context) string {
+	if requestID := c.Value(constant.RequestID); requestID != nil {
+		return requestID.(string)
+	}
+	return ""
+}
+
+func LWithRequestID(ctx context.Context) *zap.Logger {
+	return zap.L().With(zap.String(constant.RequestID, GetRequestID(ctx)))
+}
+
+func LWithBody(ctx context.Context, body any) *zap.Logger {
+	return LWithRequestID(ctx).With(zap.Any("body", body))
 }
