@@ -27,6 +27,8 @@ type CasbinManager interface {
 	GetUsersInRole(role string) ([]string, error)
 	GetRolesForUser(user string) ([]string, error)
 	DeleteUserAllRoles(user string) (bool, error)
+
+	LoadPolicy() error
 }
 
 // casbinManager 实现结构体
@@ -173,4 +175,12 @@ func (m *casbinManager) DeleteUserAllRoles(user string) (bool, error) {
 		return false, fmt.Errorf("failed to delete all roles for user %s: %w", user, err)
 	}
 	return ok, nil
+}
+
+// LoadPolicy 加载策略
+func (m *casbinManager) LoadPolicy() error {
+	if err := m.enforcer.LoadPolicy(); err != nil {
+		return fmt.Errorf("failed to load casbin policy: %w", err)
+	}
+	return nil
 }

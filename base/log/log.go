@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/yiran15/api-server/base/conf"
-	"github.com/yiran15/api-server/base/constant"
+	"github.com/yiran15/api-server/base/helper"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -31,7 +31,7 @@ func NewLogger() {
 		EncodeCaller:  zapcore.ShortCallerEncoder,
 	}
 	encoder = zapcore.NewJSONEncoder(config)
-	writer = zapcore.AddSync(os.Stdout)
+	writer = zapcore.AddSync(os.Stderr)
 
 	switch logLevelStr {
 	case "debug":
@@ -42,24 +42,17 @@ func NewLogger() {
 		logLevel = zap.InfoLevel
 	}
 	core := zapcore.NewCore(encoder, writer, logLevel)
-	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.FatalLevel), zap.ErrorOutput(os.Stderr))
+	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.FatalLevel))
 	zap.ReplaceGlobals(logger)
 	if logLevel == zap.DebugLevel {
 		zap.L().Debug("log initialization successful", zap.String("level", logLevelStr))
 	}
 }
 
-func GetRequestID(c context.Context) string {
-	if requestID := c.Value(constant.RequestID); requestID != nil {
-		return requestID.(string)
-	}
-	return ""
+func WithRequestID(ctx context.Context) *zap.Logger {
+	return zap.L().With(zap.String("request_id", helper.GetRequestIDFromContext(ctx)))
 }
 
-func LWithRequestID(ctx context.Context) *zap.Logger {
-	return zap.L().With(zap.String(constant.RequestID, GetRequestID(ctx)))
-}
-
-func LWithBody(ctx context.Context, body any) *zap.Logger {
-	return LWithRequestID(ctx).With(zap.Any("body", body))
+func WithBody(ctx context.Context, body any) *zap.Logger {
+	return WithRequestID(ctx).With(zap.Any("body", body))
 }

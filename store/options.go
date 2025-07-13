@@ -23,7 +23,15 @@ type Option func(db *gorm.DB) *gorm.DB
 // Where 用于添加 WHERE 条件。
 func Where(colum string, value any) Option {
 	return func(query *gorm.DB) *gorm.DB {
-		return query.Where(fmt.Sprintf("%s = ?", colum), value)
+		where := fmt.Sprintf("%s = ?", colum)
+		return query.Where(where, value)
+	}
+}
+
+func Like(colum string, value any) Option {
+	return func(query *gorm.DB) *gorm.DB {
+		where := fmt.Sprintf("%s like ?", colum)
+		return query.Where(where, value)
 	}
 }
 

@@ -1,15 +1,25 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
+
+const (
+	PreloadApis = "Apis"
+)
 
 type Api struct {
-	Id          int64     `gorm:"column:id;primarykey"`
-	CreatedAt   time.Time `gorm:"column:created_at"`
-	UpdatedAt   time.Time `gorm:"column:updated_at"`
-	Name        string    `gorm:"column:name"`
-	Path        string    `gorm:"column:path"`
-	Method      string    `gorm:"column:method"`
-	Description string    `gorm:"column:description"`
+	Id          int64          `gorm:"column:id;primarykey" json:"id,omitempty"`
+	CreatedAt   time.Time      `gorm:"column:created_at" json:"createdAt,omitempty"`
+	UpdatedAt   time.Time      `gorm:"column:updated_at" json:"updatedAt,omitempty"`
+	DeletedAt   gorm.DeletedAt `gorm:"column:deleted_at;index" json:"-"`
+	Name        string         `gorm:"column:name" json:"name,omitempty"`
+	Path        string         `gorm:"column:path" json:"path,omitempty"`
+	Method      string         `gorm:"column:method" json:"method,omitempty"`
+	Description string         `gorm:"column:description" json:"description,omitempty"`
+	Roles       []*Role        `gorm:"many2many:role_apis" json:"roles,omitempty"`
 }
 
 func (*Api) TableName() string {

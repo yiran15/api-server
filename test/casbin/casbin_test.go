@@ -54,15 +54,6 @@ func init() {
 	casbinManager = casbin.NewCasbinManager(enforcer)
 }
 
-func TestAddRole(t *testing.T) {
-	for _, api := range testApis {
-		_, err := casbinManager.AddRolePolicy(testRole, api)
-		if err != nil {
-			t.Fatalf("AddRolePolicy failed unexpectedly: %v", err)
-		}
-	}
-}
-
 func TestGetRole(t *testing.T) {
 	apis, err := casbinManager.GetRolePolicies(testRole)
 	if err != nil {
@@ -103,5 +94,22 @@ func TestGetRolesForUser(t *testing.T) {
 	}
 	if len(roles) != 1 {
 		t.Fatalf("GetRolesForUser returned unexpected number of roles: expected 1, got %d", len(roles))
+	}
+}
+
+func TestCreateP(t *testing.T) {
+	_, err := casbinManager.AddRolePolicy("admin_p", &model.Api{
+		Path:   "*",
+		Method: "*",
+	})
+	if err != nil {
+		t.Fatalf("AddRolePolicy failed unexpectedly: %v", err)
+	}
+}
+
+func TestAddRole(t *testing.T) {
+	_, err := casbinManager.AddUserToRole("admin_p", "admin")
+	if err != nil {
+		t.Fatalf("AddUserToRole failed unexpectedly: %v", err)
 	}
 }

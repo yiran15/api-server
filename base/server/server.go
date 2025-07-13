@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/yiran15/api-server/base/conf"
 	"github.com/yiran15/api-server/base/router"
+	"github.com/yiran15/api-server/controller"
 	"go.uber.org/zap"
 )
 
@@ -50,15 +51,16 @@ func (s *Server) Stop() error {
 	return s.server.Shutdown(ctx)
 }
 
-func NewHttpServer(r router.RouterInterface) *gin.Engine {
+func NewHttpServer(r router.RouterInterface) (*gin.Engine, error) {
 	if conf.GetServerLogLevel() == "debug" {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	engine := gin.New()
+	controller.NewValidator()
 
 	apiGroup := engine.Group("/api")
 	r.RegisterRouter(apiGroup)
-	return engine
+	return engine, nil
 }

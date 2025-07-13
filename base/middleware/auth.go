@@ -1,32 +1,56 @@
 package middleware
 
 import (
-	"errors"
+	"context"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/yiran15/api-server/base/constant"
 )
 
-// Authentication 基于JWT的认证中间件
-func (a *Middleware) Auth() gin.HandlerFunc {
+// Auth 是一个基于 JWT 的认证中间件
+func (m *Middleware) Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.Request.Header.Get("Authorization")
 		if authHeader == "" {
-			_ = c.Error(errors.New("auth header is empty"))
+			m.Abort(c, http.StatusUnauthorized, constant.ErrNoAuthHeader)
 			return
 		}
+
 		parts := strings.SplitN(authHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			_ = c.Error(errors.New("invalid auth header"))
+			m.Abort(c, http.StatusUnauthorized, constant.ErrInvalidAuthHeader)
 			return
 		}
-		mc, err := a.jwtImpl.ParseToken(parts[1])
+
+		tokenString := parts[1]
+		mc, err := m.jwtImpl.ParseToken(tokenString)
 		if err != nil {
-			_ = c.Error(err)
+			m.Abort(c, http.StatusUnauthorized, err)
 			return
 		}
-		c.Set(constant.AuthMidwareKey, mc)
+		// c.Set(constant.AuthMidwareKey, mc)
+		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), constant.UserContextKey{}, mc))
 		c.Next()
 	}
+}
+
+func (m *Middleware) Abort(c *gin.Context, code int, err error) {
+	switch code {
+	case http.StatusUnauthorized:
+		c.JSON(code, gin.H{
+			"code":  code,
+			"msg":   "unauthorized",
+			"error": err.Error(),
+		})
+	case http.StatusForbidden:
+		c.JSON(code, gin.H{
+			"code":  code,
+			"msg":   "forbidden",
+			"error": err.Error(),
+		})
+	}
+	c.Error(err)
+	c.Abort()
 }
