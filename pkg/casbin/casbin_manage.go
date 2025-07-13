@@ -79,8 +79,8 @@ func (m *casbinManager) GetRolePolicies(role string) ([]*model.Api, error) {
 	for _, p := range policies {
 		if len(p) >= 3 {
 			apis = append(apis, &model.Api{
-				Path:   p[1], // obj
-				Method: p[2], // act
+				Path:   p[1],
+				Method: p[2],
 			})
 		}
 	}
