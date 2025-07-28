@@ -1,6 +1,6 @@
 services:
   apiserver:
-    image: ${IMAGE}
+    image: api-server
     restart: always
     container_name: apiserver
     environment:
@@ -12,6 +12,23 @@ services:
       # - OTEL_EXPORTER_PROMETHEUS_PORT=9464
       # - OTEL_EXPORTER_PROMETHEUS_HOST=0.0.0.0
     ports:
-    - 8080:8080
+      - 8080:8080
     volumes:
       - ./config.yaml:/app/config.yaml
+
+  redis:
+    image: registry.cn-beijing.aliyuncs.com/middleware1995/redis:7.2-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --requirepass 123456
+      --appendonly yes
+      --save 86400 1
+
+volumes:
+  redis-data:

@@ -18,21 +18,21 @@ var (
 	testUser = "test_user"
 	testApis = []*model.Api{
 		{
-			Id:          1,
+			ID:          1,
 			Name:        "resource1",
 			Description: "resource1 GET",
 			Path:        "/api/v1/resource1",
 			Method:      "GET",
 		},
 		{
-			Id:          2,
+			ID:          2,
 			Name:        "resource2",
 			Description: "resource2 POST",
 			Path:        "/api/v1/resource2/*", // 带通配符的路径
 			Method:      "POST",
 		},
 		{
-			Id:          3,
+			ID:          3,
 			Name:        "resource3",
 			Description: "resource3 *",
 			Path:        "/api/v1/resource3",

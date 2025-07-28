@@ -1,0 +1,30 @@
+server:
+  bind: 0.0.0.0:8080
+  logLevel: debug
+
+mysql:
+  username: root
+  password: ""
+  host: 127.0.0.1
+  port: 3306
+  database: ""
+  maxIdleConns: 10
+  maxOpenConns: 20
+  maxLifetime: 30m
+  debug: true
+
+# redis配置
+redis:
+  # single sentinel
+  mode: single
+  host: 127.0.0.1:6379
+  password: ""
+  # 过期时间 3s 3m 3h
+  expireTime: 300s
+  keyPrefix: tutu
+  db: 0
+
+jwt:
+  issuer: tutu
+  secret: ""
+  expireTime: 9999h

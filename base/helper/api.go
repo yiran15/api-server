@@ -20,7 +20,7 @@ func ValidateRoleApis(reqApis []int64, total int64, apis []*model.Api) error {
 
 	foundApis := make([]int64, 0, total)
 	for _, v := range apis {
-		foundApis = append(foundApis, v.Id)
+		foundApis = append(foundApis, v.ID)
 	}
 
 	notFoundApis := make([]int64, 0, total)
