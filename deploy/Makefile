@@ -35,9 +35,8 @@ push:
 start:
 	@echo "--- 启动/更新应用 ---"
 	@echo "拷贝配置文件"
-	cp ../config.yaml .
 	@echo "更新 docker-compose.yaml"
-	sed -i "s#image.*#image: $(FULL_IMAGE_NAME)#" docker-compose.yaml
+	sed -i "s#image: api-server#image: $(FULL_IMAGE_NAME)#" docker-compose.yaml
 	@echo "启动应用"
 	docker compose up -d
 	@echo "--- 应用启动/更新完成 ---"
