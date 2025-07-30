@@ -93,7 +93,7 @@ func (j *GenerateToken) ParseToken(tokenString string) (jwtClaims *JwtClaims, er
 }
 
 func (j *GenerateToken) GetUser(ctx context.Context) (*JwtClaims, error) {
-	cl := ctx.Value(constant.UserContextKey{})
+	cl := ctx.Value(constant.UserContextKey)
 	if cl == nil {
 		return nil, errors.New("get jwt claims by ctx failed")
 	}

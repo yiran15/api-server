@@ -19,6 +19,7 @@ import (
 
 type UserServicer interface {
 	Login(ctx context.Context, req *apitypes.UserLoginRequest) (*apitypes.UserLoginResponse, error)
+	Info(ctx context.Context) (*model.User, error)
 	CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error
 	UpdateUser(ctx context.Context, req *apitypes.UserUpdateRequest) error
 	UpdateRole(ctx context.Context, req *apitypes.UserUpdateRoleRequest) error
@@ -219,6 +220,18 @@ func (s *UserService) DeleteUser(ctx context.Context, req *apitypes.IDRequest) e
 func (s *UserService) QueryUser(ctx context.Context, req *apitypes.IDRequest) (*model.User, error) {
 	log.WithBody(ctx, req).Info("query user request")
 	return s.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
+}
+
+func (s *UserService) Info(ctx context.Context) (*model.User, error) {
+	mc, err := s.jwt.GetUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if mc.UserID == 0 {
+		log.WithRequestID(ctx).Error("user not found", zap.Int64("userId", mc.UserID), zap.String("userName", mc.UserName))
+		return nil, errors.New("user not found")
+	}
+	return s.userStore.Query(ctx, store.Where("id", mc.UserID), store.Preload(model.PreloadRoles))
 }
 
 func (s *UserService) ListUser(ctx context.Context, req *apitypes.UserListRequest) (*apitypes.UserListResponse, error) {

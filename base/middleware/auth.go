@@ -30,8 +30,8 @@ func (m *Middleware) Auth() gin.HandlerFunc {
 			m.Abort(c, http.StatusUnauthorized, err)
 			return
 		}
-		// c.Set(constant.AuthMidwareKey, mc)
-		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), constant.UserContextKey{}, mc))
+		ctx := context.WithValue(c.Request.Context(), constant.UserContextKey, mc)
+		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
 }
