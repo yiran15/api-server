@@ -1,6 +1,8 @@
 package constant
 
-type UserContextKey struct{}
+type userContextKey struct{}
+
+var UserContextKey = userContextKey{}
 
 const (
 	AuthMidwareKey      = "user"

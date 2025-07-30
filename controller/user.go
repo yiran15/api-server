@@ -13,6 +13,7 @@ type UserController interface {
 	UserQuery(c *gin.Context)
 	UserList(c *gin.Context)
 	UserUpdateRole(c *gin.Context)
+	UserInfo(c *gin.Context)
 }
 
 type UserControllerImpl struct {
@@ -47,6 +48,10 @@ func (u *UserControllerImpl) UserDelete(c *gin.Context) {
 
 func (u *UserControllerImpl) UserQuery(c *gin.Context) {
 	ResponseWithData(c, u.userServicer.QueryUser, bindTypeUri)
+}
+
+func (u *UserControllerImpl) UserInfo(c *gin.Context) {
+	ResponseWithDataNoBind(c, u.userServicer.Info)
 }
 
 func (u *UserControllerImpl) UserList(c *gin.Context) {

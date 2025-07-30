@@ -44,8 +44,8 @@ func (r *Router) registerUserRouter(userGroup *gin.RouterGroup) {
 	baseGroup := userGroup.Group("/users")
 	baseGroup.POST("/login", r.userRouter.UserLogin)
 	baseGroup.POST("/register", r.userRouter.UserCreate)
-
 	aGroup := baseGroup.Use(r.middleware.Auth())
+	aGroup.GET("/info", r.userRouter.UserInfo)
 	aGroup.PUT("/:id", r.userRouter.UserUpdate)
 
 	authGroup := baseGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())

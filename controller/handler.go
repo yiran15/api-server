@@ -94,6 +94,21 @@ func ResponseOnlySuccess[T any](c *gin.Context, handler HandlerErr[T], bindTypes
 	responseSuccess(c, nil)
 }
 
+type Handler[R any] func(ctx context.Context) (R, error)
+
+func ResponseWithDataNoBind[R any](c *gin.Context, handler Handler[R]) {
+	var (
+		data R
+		err  error
+	)
+	if data, err = handler(c.Request.Context()); err != nil {
+		responseError(c, err)
+		return
+	}
+
+	responseSuccess(c, data)
+}
+
 func responseError(c *gin.Context, err error) {
 	code, err := getErr(err)
 	c.JSON(code, gin.H{
