@@ -1,6 +1,8 @@
 package constant
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	ErrNoAuthHeader      = errors.New("no auth header")

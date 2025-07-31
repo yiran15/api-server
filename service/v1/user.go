@@ -19,6 +19,7 @@ import (
 
 type UserServicer interface {
 	Login(ctx context.Context, req *apitypes.UserLoginRequest) (*apitypes.UserLoginResponse, error)
+	Logout(ctx context.Context) error
 	Info(ctx context.Context) (*model.User, error)
 	CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error
 	UpdateUser(ctx context.Context, req *apitypes.UserUpdateRequest) error
@@ -75,6 +76,14 @@ func (s *UserService) Login(ctx context.Context, req *apitypes.UserLoginRequest)
 		User:  user,
 		Token: token,
 	}, nil
+}
+
+func (s *UserService) Logout(ctx context.Context) error {
+	mc, err := s.jwt.GetUser(ctx)
+	if err != nil {
+		return err
+	}
+	return s.cacheStore.DelKey(ctx, store.RoleType, mc.UserName)
 }
 
 func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error {
