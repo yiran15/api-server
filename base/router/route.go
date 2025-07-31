@@ -7,7 +7,7 @@ import (
 )
 
 type RouterInterface interface {
-	RegisterRouter(apiGroup *gin.RouterGroup)
+	RegisterRouter(engine *gin.Engine)
 }
 
 type Router struct {
@@ -30,13 +30,12 @@ func NewRouter(
 	}
 }
 
-func (r *Router) RegisterRouter(apiGroup *gin.RouterGroup) {
-	apiGroup.Use(r.middleware.ZapLogger(), r.middleware.RequestID())
-	v1Group := apiGroup.Group("/v1")
-
-	r.registerUserRouter(v1Group)
-	r.registerRoleRouter(v1Group)
-	r.registerApiRouter(v1Group)
+func (r *Router) RegisterRouter(engine *gin.Engine) {
+	engine.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsSpecificOrigins, "*"), r.middleware.RequestID())
+	apiGroup := engine.Group("/api/v1")
+	r.registerUserRouter(apiGroup)
+	r.registerRoleRouter(apiGroup)
+	r.registerApiRouter(apiGroup)
 }
 
 func (r *Router) registerUserRouter(userGroup *gin.RouterGroup) {

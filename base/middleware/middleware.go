@@ -12,6 +12,7 @@ type MiddlewareInterface interface {
 	AuthZ() gin.HandlerFunc
 	RequestID() gin.HandlerFunc
 	ZapLogger() gin.HandlerFunc
+	Cors(option CorsOption, allowedOrigins ...string) gin.HandlerFunc
 }
 
 type Middleware struct {
