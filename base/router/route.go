@@ -31,9 +31,8 @@ func NewRouter(
 }
 
 func (r *Router) RegisterRouter(apiGroup *gin.RouterGroup) {
-	apiGroup.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsAllowAll, "*"), r.middleware.RequestID())
+	apiGroup.Use(r.middleware.ZapLogger(), r.middleware.RequestID())
 	v1Group := apiGroup.Group("/v1")
-	// TODO 添加路由
 
 	r.registerUserRouter(v1Group)
 	r.registerRoleRouter(v1Group)
@@ -49,6 +48,8 @@ func (r *Router) registerUserRouter(userGroup *gin.RouterGroup) {
 	aGroup.PUT("/:id", r.userRouter.UserUpdate)
 
 	authGroup := baseGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())
+	authGroup.POST("/logout", r.userRouter.UserLogout)
+
 	authGroup.GET("/:id", r.userRouter.UserQuery)
 	authGroup.GET("/", r.userRouter.UserList)
 	authGroup.DELETE("/:id", r.userRouter.UserDelete)

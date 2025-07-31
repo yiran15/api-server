@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/yiran15/api-server/base/conf"
 	"github.com/yiran15/api-server/base/router"
@@ -59,6 +60,14 @@ func NewHttpServer(r router.RouterInterface) (*gin.Engine, error) {
 	}
 	engine := gin.New()
 	controller.NewValidator()
+	engine.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	apiGroup := engine.Group("/api")
 	r.RegisterRouter(apiGroup)

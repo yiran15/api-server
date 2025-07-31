@@ -7,6 +7,7 @@ import (
 
 type UserController interface {
 	UserLogin(c *gin.Context)
+	UserLogout(c *gin.Context)
 	UserCreate(c *gin.Context)
 	UserUpdate(c *gin.Context)
 	UserDelete(c *gin.Context)
@@ -28,6 +29,10 @@ func NewUserController(userServicer v1.UserServicer) UserController {
 
 func (u *UserControllerImpl) UserLogin(c *gin.Context) {
 	ResponseWithData(c, u.userServicer.Login, bindTypeJson)
+}
+
+func (u *UserControllerImpl) UserLogout(c *gin.Context) {
+	ResponseNoBind(c, u.userServicer.Logout)
 }
 
 func (u *UserControllerImpl) UserCreate(c *gin.Context) {

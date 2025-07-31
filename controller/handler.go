@@ -109,6 +109,16 @@ func ResponseWithDataNoBind[R any](c *gin.Context, handler Handler[R]) {
 	responseSuccess(c, data)
 }
 
+type HandlerErrNoBind func(ctx context.Context) error
+
+func ResponseNoBind(c *gin.Context, handler HandlerErrNoBind) {
+	if err := handler(c.Request.Context()); err != nil {
+		responseError(c, err)
+		return
+	}
+	responseSuccess(c, nil)
+}
+
 func responseError(c *gin.Context, err error) {
 	code, err := getErr(err)
 	c.JSON(code, gin.H{
