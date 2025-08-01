@@ -31,46 +31,52 @@ func NewRouter(
 }
 
 func (r *Router) RegisterRouter(engine *gin.Engine) {
-	engine.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsSpecificOrigins, "*"), r.middleware.RequestID())
+	engine.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsAllowAll), r.middleware.RequestID())
 	apiGroup := engine.Group("/api/v1")
 	r.registerUserRouter(apiGroup)
 	r.registerRoleRouter(apiGroup)
 	r.registerApiRouter(apiGroup)
 }
 
-func (r *Router) registerUserRouter(userGroup *gin.RouterGroup) {
-	baseGroup := userGroup.Group("/users")
-	baseGroup.POST("/login", r.userRouter.UserLogin)
-	baseGroup.POST("/register", r.userRouter.UserCreate)
-	aGroup := baseGroup.Use(r.middleware.Auth())
-	aGroup.GET("/info", r.userRouter.UserInfo)
-	aGroup.PUT("/:id", r.userRouter.UserUpdate)
+func (r *Router) registerUserRouter(apiGroup *gin.RouterGroup) {
+	userGroup := apiGroup.Group("/users")
+	{
+		userGroup.POST("/login", r.userRouter.UserLogin)
+		userGroup.POST("/register", r.userRouter.UserCreate)
+		userGroup.Use(r.middleware.Auth())
+		userGroup.GET("/info", r.userRouter.UserInfo)
+		userGroup.PUT("/:id", r.userRouter.UserUpdate)
+		userGroup.Use(r.middleware.AuthZ())
+		userGroup.POST("/logout", r.userRouter.UserLogout)
+		userGroup.GET("/:id", r.userRouter.UserQuery)
+		userGroup.GET("", r.userRouter.UserList)
+		userGroup.DELETE("/:id", r.userRouter.UserDelete)
+		userGroup.PUT("/:id/roles", r.userRouter.UserUpdateRole)
+	}
 
-	authGroup := baseGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())
-	authGroup.POST("/logout", r.userRouter.UserLogout)
-
-	authGroup.GET("/:id", r.userRouter.UserQuery)
-	authGroup.GET("/", r.userRouter.UserList)
-	authGroup.DELETE("/:id", r.userRouter.UserDelete)
-	authGroup.PUT("/:id/roles", r.userRouter.UserUpdateRole)
 }
 
-func (r *Router) registerRoleRouter(roleGroup *gin.RouterGroup) {
-	baseGroup := roleGroup.Group("/roles")
-	authGroup := baseGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())
-	authGroup.POST("/", r.roleRouter.CreateRole)
-	authGroup.PUT("/:id", r.roleRouter.UpdateRole)
-	authGroup.DELETE("/:id", r.roleRouter.DeleteRole)
-	authGroup.GET("/:id", r.roleRouter.QueryRole)
-	authGroup.GET("/", r.roleRouter.ListRole)
+func (r *Router) registerRoleRouter(apiGroup *gin.RouterGroup) {
+	roleGroup := apiGroup.Group("/roles")
+	{
+		roleGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())
+		roleGroup.POST("", r.roleRouter.CreateRole)
+		roleGroup.PUT("/:id", r.roleRouter.UpdateRole)
+		roleGroup.DELETE("/:id", r.roleRouter.DeleteRole)
+		roleGroup.GET("/:id", r.roleRouter.QueryRole)
+		roleGroup.GET("", r.roleRouter.ListRole)
+	}
+
 }
 
 func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {
 	baseGroup := apiGroup.Group("/apis")
-	authGroup := baseGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())
-	authGroup.POST("/", r.apiRouter.CreateApi)
-	authGroup.PUT("/:id", r.apiRouter.UpdateApi)
-	authGroup.DELETE("/:id", r.apiRouter.DeleteApi)
-	authGroup.GET("/:id", r.apiRouter.QueryApi)
-	authGroup.GET("/", r.apiRouter.ListApi)
+	{
+		baseGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())
+		baseGroup.POST("", r.apiRouter.CreateApi)
+		baseGroup.PUT("/:id", r.apiRouter.UpdateApi)
+		baseGroup.DELETE("/:id", r.apiRouter.DeleteApi)
+		baseGroup.GET("/:id", r.apiRouter.QueryApi)
+		baseGroup.GET("", r.apiRouter.ListApi)
+	}
 }

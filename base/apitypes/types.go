@@ -15,37 +15,8 @@ type ListResponse struct {
 }
 
 type SortParam struct {
-	Sort      uint   `form:"sort"`                                         // 排序字段名，如 "createdAt", "name"
-	Direction string `form:"direction" binding:"omitempty,oneof=ASC DESC"` // 排序方向，"asc" 或 "desc"
-}
-
-// GetSortField 根据字段序号返回排序字段名
-// 1 id
-// 2 created_at
-// 3 updated_at
-// 4 name
-// 5 nick_name
-// 6 email
-// 7 mobile
-func (receiver *SortParam) GetUserSortField(fieldNum uint) string {
-	switch fieldNum {
-	case 1:
-		return "id"
-	case 2:
-		return "created_at"
-	case 3:
-		return "updated_at"
-	case 4:
-		return "name"
-	case 5:
-		return "nick_name"
-	case 6:
-		return "email"
-	case 7:
-		return "mobile"
-	default:
-		return "id"
-	}
+	Sort      string `form:"sort" binding:"omitempty,oneof=id name created_at updated_at nick_name email mobile"` // 排序字段名，如 "createdAt", "name"
+	Direction string `form:"direction" binding:"omitempty,oneof=asc desc"`                                        // 排序方向，"asc" 或 "desc"
 }
 
 func (receiver *SortParam) GetRoleSortField(fieldNum uint) string {
