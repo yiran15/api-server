@@ -74,22 +74,3 @@ func (m *Middleware) Cors(option CorsOption, allowedOrigins ...string) gin.Handl
 		})
 	}
 }
-
-// CorssDomainMiddleware 跨域中间件
-// func (m *Middleware) Cors(_ CorsOption, _ ...string) gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		if origin := c.Request.Header.Get("Origin"); origin != "" {
-// 			c.Header("Access-Control-Allow-Origin", "*")
-// 			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-// 			c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE, PATCH")
-// 			c.Header("Access-Control-Max-Age", "7200")
-// 		}
-
-// 		//allows OPTIONS method
-// 		if c.Request.Method == http.MethodOptions {
-// 			c.AbortWithStatus(http.StatusOK)
-// 			return
-// 		}
-// 		c.Next()
-// 	}
-// }

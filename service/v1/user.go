@@ -259,7 +259,7 @@ func (s *UserService) ListUser(ctx context.Context, req *apitypes.UserListReques
 	}
 
 	if req.SortParam != nil {
-		filed = req.SortParam.GetUserSortField(req.Sort)
+		filed = req.SortParam.Sort
 		oder = req.SortParam.Direction
 	}
 
