@@ -16,10 +16,11 @@ type ApiUpdateRequest struct {
 
 type ApiListRequest struct {
 	*Pagination
-	Name   string `form:"name"`
-	Path   string `form:"path" validate:"omitempty,uri"`
-	Method string `form:"method" validate:"omitempty,oneof=GET POST PUT DELETE"`
-	*SortParam
+	Name      string `form:"name"`
+	Path      string `form:"path" validate:"omitempty,uri"`
+	Method    string `form:"method" validate:"omitempty,oneof=GET POST PUT DELETE"`
+	Sort      string `form:"sort" binding:"omitempty,oneof=id name path method created_at updated_at"`
+	Direction string `form:"direction" binding:"omitempty,oneof=asc desc"`
 }
 
 type ApiListResponse struct {

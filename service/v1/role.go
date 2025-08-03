@@ -217,9 +217,9 @@ func (s *roleService) ListRole(ctx context.Context, req *apitypes.RoleListReques
 		where = store.Like("name", "%"+req.Name+"%")
 	}
 
-	if req.SortParam != nil {
-		colum = req.SortParam.GetRoleSortField(req.Sort)
-		oder = req.SortParam.Direction
+	if req.Sort != "" && req.Direction != "" {
+		colum = req.Sort
+		oder = req.Direction
 	}
 
 	total, objs, err := s.roleRepository.List(ctx, req.Page, req.PageSize, colum, oder, where)

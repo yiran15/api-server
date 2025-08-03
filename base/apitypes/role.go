@@ -16,8 +16,9 @@ type RoleUpdateRequest struct {
 
 type RoleListRequest struct {
 	*Pagination
-	Name string `form:"name"`
-	*SortParam
+	Name      string `form:"name"`
+	Sort      string `form:"sort" binding:"omitempty,oneof=id name created_at updated_at"`
+	Direction string `form:"direction" binding:"omitempty,oneof=asc desc"`
 }
 
 type RoleListResponse struct {

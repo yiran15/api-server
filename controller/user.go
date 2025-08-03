@@ -9,7 +9,8 @@ type UserController interface {
 	UserLogin(c *gin.Context)
 	UserLogout(c *gin.Context)
 	UserCreate(c *gin.Context)
-	UserUpdate(c *gin.Context)
+	UserUpdateByAdmin(c *gin.Context)
+	UserUpdateBySelf(c *gin.Context)
 	UserDelete(c *gin.Context)
 	UserQuery(c *gin.Context)
 	UserList(c *gin.Context)
@@ -39,8 +40,12 @@ func (u *UserControllerImpl) UserCreate(c *gin.Context) {
 	ResponseOnlySuccess(c, u.userServicer.CreateUser, bindTypeJson)
 }
 
-func (u *UserControllerImpl) UserUpdate(c *gin.Context) {
-	ResponseOnlySuccess(c, u.userServicer.UpdateUser, bindTypeUri, bindTypeJson)
+func (u *UserControllerImpl) UserUpdateByAdmin(c *gin.Context) {
+	ResponseOnlySuccess(c, u.userServicer.UpdateUserByAdmin, bindTypeUri, bindTypeJson)
+}
+
+func (u *UserControllerImpl) UserUpdateBySelf(c *gin.Context) {
+	ResponseOnlySuccess(c, u.userServicer.UpdateUserBySelf, bindTypeJson)
 }
 
 func (u *UserControllerImpl) UserUpdateRole(c *gin.Context) {
