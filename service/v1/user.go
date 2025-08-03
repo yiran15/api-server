@@ -22,7 +22,8 @@ type UserServicer interface {
 	Logout(ctx context.Context) error
 	Info(ctx context.Context) (*model.User, error)
 	CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error
-	UpdateUser(ctx context.Context, req *apitypes.UserUpdateRequest) error
+	UpdateUserByAdmin(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error
+	UpdateUserBySelf(ctx context.Context, req *apitypes.UserUpdateSelfRequest) error
 	UpdateRole(ctx context.Context, req *apitypes.UserUpdateRoleRequest) error
 	DeleteUser(ctx context.Context, req *apitypes.IDRequest) error
 	QueryUser(ctx context.Context, req *apitypes.IDRequest) (*model.User, error)
@@ -49,10 +50,14 @@ func NewUserService(userStore store.UserStorer, roleStore store.RoleStorer, cach
 
 func (s *UserService) Login(ctx context.Context, req *apitypes.UserLoginRequest) (*apitypes.UserLoginResponse, error) {
 	log.WithBody(ctx, req).Info("login request")
-	user, err := s.userStore.Query(ctx, store.Where("email", req.Email), store.Preload(model.PreloadRoles))
+	user, err := s.userStore.Query(ctx, store.Where("email", req.Email), store.Where("status", 1), store.Preload(model.PreloadRoles))
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		return nil, errors.New("user not found")
 	}
+
 	if !s.checkPasswordHash(req.Password, user.Password) {
 		return nil, errors.New("invalid password")
 	}
@@ -87,20 +92,25 @@ func (s *UserService) Logout(ctx context.Context) error {
 }
 
 func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error {
-	if user, err := s.userStore.Query(ctx, store.Where("email", req.Email)); err != nil {
+	var (
+		user *model.User
+		err  error
+	)
+	if user, err = s.userStore.Query(ctx, store.Where("email", req.Email), store.Where("status", 1)); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-		if user != nil {
-			return fmt.Errorf("user %s already exists", req.Email)
-		}
+	}
+
+	if user != nil {
+		return fmt.Errorf("user %s already exists", req.Name)
 	}
 
 	hashedPassword, err := s.hashPassword(req.Password)
 	if err != nil {
 		return err
 	}
-	user := &model.User{
+	user = &model.User{
 		Name:     req.Name,
 		NickName: req.NickName,
 		Email:    req.Email,
@@ -114,35 +124,48 @@ func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRe
 	return nil
 }
 
-func (s *UserService) UpdateUser(ctx context.Context, req *apitypes.UserUpdateRequest) error {
+func (s *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
+	return s.UpdateUser(ctx, req)
+}
+
+func (s *UserService) UpdateUserBySelf(ctx context.Context, req *apitypes.UserUpdateSelfRequest) error {
 	log.WithBody(ctx, req).Info("update user request")
 	mc, err := s.jwt.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	if mc.UserID != req.ID {
-		log.WithRequestID(ctx).Error("no permission", zap.Int64("userId", mc.UserID), zap.Int64("reqId", req.ID))
-		return errors.New("no permission")
-	}
+	newReq := new(apitypes.UserUpdateAdminRequest)
+	newReq.ID = mc.UserID
+	newReq.UserUpdateSelfRequest = req
+	return s.UpdateUser(ctx, newReq)
+}
 
-	user, err := s.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
+func (s *UserService) UpdateUser(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
+	user, err := s.userStore.Query(ctx, store.Where("id", req.ID))
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("user %d not found", req.ID)
+		}
 		return err
 	}
-
-	if req.Password != "" {
-		hashedPassword, err := s.hashPassword(req.Password)
-		if err != nil {
-			return err
+	if req.UserUpdateSelfRequest != nil {
+		user.Name = req.UserUpdateSelfRequest.Name
+		user.NickName = req.UserUpdateSelfRequest.NickName
+		user.Email = req.UserUpdateSelfRequest.Email
+		user.Avatar = req.UserUpdateSelfRequest.Avatar
+		user.Mobile = req.UserUpdateSelfRequest.Mobile
+		if req.Password != "" {
+			hashedPassword, err := s.hashPassword(req.Password)
+			if err != nil {
+				return err
+			}
+			user.Password = hashedPassword
 		}
-		user.Password = hashedPassword
 	}
 
-	user.Name = req.Name
-	user.NickName = req.NickName
-	user.Email = req.Email
-	user.Avatar = req.Avatar
-	user.Mobile = req.Mobile
+	if req.Status != 0 {
+		user.Status = &req.Status
+	}
 	return s.userStore.Update(ctx, user)
 }
 
@@ -210,19 +233,10 @@ func (s *UserService) UpdateRole(ctx context.Context, req *apitypes.UserUpdateRo
 
 func (s *UserService) DeleteUser(ctx context.Context, req *apitypes.IDRequest) error {
 	log.WithBody(ctx, req).Info("delete user request")
-	mc, err := s.jwt.GetUser(ctx)
-	if err != nil {
-		return err
-	}
-	if mc.UserID != req.ID {
-		log.WithRequestID(ctx).Error("no permission", zap.Int64("userId", mc.UserID), zap.Int64("reqId", req.ID))
-		return errors.New("no permission")
-	}
 	user, err := s.userStore.Query(ctx, store.Where("id", req.ID))
 	if err != nil {
 		return err
 	}
-
 	return s.userStore.Delete(ctx, user)
 }
 
@@ -246,24 +260,29 @@ func (s *UserService) Info(ctx context.Context) (*model.User, error) {
 func (s *UserService) ListUser(ctx context.Context, req *apitypes.UserListRequest) (*apitypes.UserListResponse, error) {
 	log.WithBody(ctx, req).Info("list user request")
 	var (
-		where store.Option
-		filed string
-		oder  string
+		likeOpt   store.Option
+		statusOpt store.Option
+		filed     string
+		oder      string
 	)
 	if req.Name != "" {
-		where = store.Where("name", req.Name)
+		likeOpt = store.Like("name", "%"+req.Name+"%")
 	} else if req.Email != "" {
-		where = store.Where("email", req.Email)
+		likeOpt = store.Like("email", "%"+req.Email+"%")
 	} else if req.Mobile != "" {
-		where = store.Where("mobile", req.Mobile)
+		likeOpt = store.Like("mobile", "%"+req.Mobile+"%")
 	}
 
-	if req.SortParam != nil {
-		filed = req.SortParam.Sort
-		oder = req.SortParam.Direction
+	if req.Status != 0 {
+		statusOpt = store.Where("status", req.Status)
 	}
 
-	total, objs, err := s.userStore.List(ctx, req.Page, req.PageSize, filed, oder, where, store.Preload(model.PreloadRoles))
+	if req.Sort != "" && req.Direction != "" {
+		filed = req.Sort
+		oder = req.Direction
+	}
+
+	total, objs, err := s.userStore.List(ctx, req.Page, req.PageSize, filed, oder, likeOpt, statusOpt, store.Preload(model.PreloadRoles))
 	if err != nil {
 		return nil, err
 	}

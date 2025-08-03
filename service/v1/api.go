@@ -86,35 +86,36 @@ func (a *ApiService) QueryApi(ctx context.Context, req *apitypes.IDRequest) (*mo
 	return a.apiStore.Query(ctx, store.Where("id", req.ID))
 }
 
-func (a *ApiService) ListApi(ctx context.Context, pagination *apitypes.ApiListRequest) (*apitypes.ApiListResponse, error) {
-	log.WithBody(ctx, pagination).Info("list api request")
+func (a *ApiService) ListApi(ctx context.Context, req *apitypes.ApiListRequest) (*apitypes.ApiListResponse, error) {
+	log.WithBody(ctx, req).Info("list api request")
 	var (
 		where store.Option
 		colum string
 		oder  string
 	)
 
-	if pagination.Name != "" {
-		where = store.Like("name", "%"+pagination.Name+"%")
-	} else if pagination.Path != "" {
-		where = store.Like("path", "%"+pagination.Path+"%")
-	} else if pagination.Method != "" {
-		where = store.Like("method", "%"+pagination.Method+"%")
+	if req.Name != "" {
+		where = store.Like("name", "%"+req.Name+"%")
+	} else if req.Path != "" {
+		where = store.Like("path", "%"+req.Path+"%")
+	} else if req.Method != "" {
+		where = store.Like("method", "%"+req.Method+"%")
 	}
 
-	if pagination.SortParam != nil {
-		colum = pagination.SortParam.GetApiSortField(pagination.Sort)
-		oder = pagination.SortParam.Direction
+	if req.Sort != "" && req.Direction != "" {
+		colum = req.Sort
+		oder = req.Direction
 	}
-	total, apis, err := a.apiStore.List(ctx, pagination.Page, pagination.PageSize, colum, oder, where)
+
+	total, apis, err := a.apiStore.List(ctx, req.Page, req.PageSize, colum, oder, where)
 	if err != nil {
 		return nil, err
 	}
 	return &apitypes.ApiListResponse{
 		ListResponse: &apitypes.ListResponse{
 			Pagination: &apitypes.Pagination{
-				Page:     pagination.Page,
-				PageSize: pagination.PageSize,
+				Page:     req.Page,
+				PageSize: req.PageSize,
 			},
 			Total: total,
 		},
