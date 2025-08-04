@@ -26,7 +26,8 @@ type UserCreateRequest struct {
 type UserUpdateAdminRequest struct {
 	ID int64 `uri:"id" validate:"required"`
 	*UserUpdateSelfRequest
-	Status int `json:"status" validate:"omitempty,oneof=1 2"`
+	Status  int     `json:"status" validate:"omitempty,oneof=1 2"`
+	RoleIds []int64 `json:"roleIds" validate:"omitempty"`
 }
 
 type UserUpdateSelfRequest struct {

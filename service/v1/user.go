@@ -24,7 +24,6 @@ type UserServicer interface {
 	CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error
 	UpdateUserByAdmin(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error
 	UpdateUserBySelf(ctx context.Context, req *apitypes.UserUpdateSelfRequest) error
-	UpdateRole(ctx context.Context, req *apitypes.UserUpdateRoleRequest) error
 	DeleteUser(ctx context.Context, req *apitypes.IDRequest) error
 	QueryUser(ctx context.Context, req *apitypes.IDRequest) (*model.User, error)
 	ListUser(ctx context.Context, pagination *apitypes.UserListRequest) (*apitypes.UserListResponse, error)
@@ -125,7 +124,18 @@ func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRe
 }
 
 func (s *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
-	return s.UpdateUser(ctx, req)
+	if err := s.updateUser(ctx, req); err != nil {
+		return err
+	}
+
+	if req.RoleIds == nil {
+		return nil
+	}
+
+	return s.updateRole(ctx, &apitypes.UserUpdateRoleRequest{
+		ID:      req.ID,
+		RoleIds: req.RoleIds,
+	})
 }
 
 func (s *UserService) UpdateUserBySelf(ctx context.Context, req *apitypes.UserUpdateSelfRequest) error {
@@ -137,98 +147,7 @@ func (s *UserService) UpdateUserBySelf(ctx context.Context, req *apitypes.UserUp
 	newReq := new(apitypes.UserUpdateAdminRequest)
 	newReq.ID = mc.UserID
 	newReq.UserUpdateSelfRequest = req
-	return s.UpdateUser(ctx, newReq)
-}
-
-func (s *UserService) UpdateUser(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
-	user, err := s.userStore.Query(ctx, store.Where("id", req.ID))
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("user %d not found", req.ID)
-		}
-		return err
-	}
-	if req.UserUpdateSelfRequest != nil {
-		user.Name = req.UserUpdateSelfRequest.Name
-		user.NickName = req.UserUpdateSelfRequest.NickName
-		user.Email = req.UserUpdateSelfRequest.Email
-		user.Avatar = req.UserUpdateSelfRequest.Avatar
-		user.Mobile = req.UserUpdateSelfRequest.Mobile
-		if req.Password != "" {
-			hashedPassword, err := s.hashPassword(req.Password)
-			if err != nil {
-				return err
-			}
-			user.Password = hashedPassword
-		}
-	}
-
-	if req.Status != 0 {
-		user.Status = &req.Status
-	}
-	return s.userStore.Update(ctx, user)
-}
-
-func (s *UserService) UpdateRole(ctx context.Context, req *apitypes.UserUpdateRoleRequest) error {
-	log.WithBody(ctx, req).Info("update user role request")
-	var (
-		total int64
-		err   error
-		roles []*model.Role
-	)
-	req.RoleIds = helper.RemoveDuplicates(req.RoleIds)
-	user, err := s.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
-	if err != nil {
-		return err
-	}
-
-	total, roles, err = s.roleStore.List(ctx, 0, 0, "", "", store.In("id", req.RoleIds))
-	if err != nil {
-		return err
-	}
-
-	if err = helper.ValidateRoleIds(req.RoleIds, roles, total); err != nil {
-		return err
-	}
-
-	if len(user.Roles) == 0 {
-		if err := s.userStore.AppendAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
-			return err
-		}
-	} else {
-		if err := s.userStore.ReplaceAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
-			return err
-		}
-	}
-
-	// 如果redis缓存中存在该用户的角色，需要删除
-	cacheRoles, err := s.cacheStore.GetSet(ctx, store.RoleType, user.Name)
-	if err != nil {
-		return err
-	}
-
-	// 如果未找到缓存，直接返回
-	if len(cacheRoles) == 0 {
-		return nil
-	}
-
-	if err := s.cacheStore.DelKey(ctx, store.RoleType, user.Name); err != nil {
-		return err
-	}
-
-	roleNames := make([]any, 0, len(roles))
-	for _, role := range roles {
-		roleNames = append(roleNames, role.Name)
-	}
-
-	defer func() {
-		time.Sleep(time.Second * 5)
-		if err := s.cacheStore.DelKey(ctx, store.RoleType, user.Name); err != nil {
-			log.WithRequestID(ctx).Error("del role cache error", zap.String("userName", user.Name), zap.Any("roleNames", roleNames), zap.Error(err))
-		}
-	}()
-
-	return s.cacheStore.SetSet(ctx, store.RoleType, user.Name, roleNames, nil)
+	return s.updateUser(ctx, newReq)
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, req *apitypes.IDRequest) error {
@@ -297,6 +216,97 @@ func (s *UserService) ListUser(ctx context.Context, req *apitypes.UserListReques
 		List: objs,
 	}
 	return res, nil
+}
+
+func (s *UserService) updateUser(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
+	user, err := s.userStore.Query(ctx, store.Where("id", req.ID))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("user %d not found", req.ID)
+		}
+		return err
+	}
+	if req.UserUpdateSelfRequest != nil {
+		user.Name = req.UserUpdateSelfRequest.Name
+		user.NickName = req.UserUpdateSelfRequest.NickName
+		user.Email = req.UserUpdateSelfRequest.Email
+		user.Avatar = req.UserUpdateSelfRequest.Avatar
+		user.Mobile = req.UserUpdateSelfRequest.Mobile
+		if req.Password != "" {
+			hashedPassword, err := s.hashPassword(req.Password)
+			if err != nil {
+				return err
+			}
+			user.Password = hashedPassword
+		}
+	}
+
+	if req.Status != 0 {
+		user.Status = &req.Status
+	}
+	return s.userStore.Update(ctx, user)
+}
+
+func (s *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRoleRequest) error {
+	log.WithBody(ctx, req).Info("update user role request")
+	var (
+		total int64
+		err   error
+		roles []*model.Role
+	)
+	req.RoleIds = helper.RemoveDuplicates(req.RoleIds)
+	user, err := s.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
+	if err != nil {
+		return err
+	}
+
+	total, roles, err = s.roleStore.List(ctx, 0, 0, "", "", store.In("id", req.RoleIds))
+	if err != nil {
+		return err
+	}
+
+	if err = helper.ValidateRoleIds(req.RoleIds, roles, total); err != nil {
+		return err
+	}
+
+	if len(user.Roles) == 0 {
+		if err := s.userStore.AppendAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
+			return err
+		}
+	} else {
+		if err := s.userStore.ReplaceAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
+			return err
+		}
+	}
+
+	// 如果redis缓存中存在该用户的角色，需要删除
+	cacheRoles, err := s.cacheStore.GetSet(ctx, store.RoleType, user.Name)
+	if err != nil {
+		return err
+	}
+
+	// 如果未找到缓存，直接返回
+	if len(cacheRoles) == 0 {
+		return nil
+	}
+
+	if err := s.cacheStore.DelKey(ctx, store.RoleType, user.Name); err != nil {
+		return err
+	}
+
+	roleNames := make([]any, 0, len(roles))
+	for _, role := range roles {
+		roleNames = append(roleNames, role.Name)
+	}
+
+	defer func() {
+		time.Sleep(time.Second * 5)
+		if err := s.cacheStore.DelKey(ctx, store.RoleType, user.Name); err != nil {
+			log.WithRequestID(ctx).Error("del role cache error", zap.String("userName", user.Name), zap.Any("roleNames", roleNames), zap.Error(err))
+		}
+	}()
+
+	return s.cacheStore.SetSet(ctx, store.RoleType, user.Name, roleNames, nil)
 }
 
 // hashPassword 对密码进行 Bcrypt 哈希

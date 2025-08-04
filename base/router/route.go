@@ -52,7 +52,6 @@ func (r *Router) registerUserRouter(apiGroup *gin.RouterGroup) {
 		userGroup.GET("/:id", r.userRouter.UserQuery)
 		userGroup.GET("", r.userRouter.UserList)
 		userGroup.DELETE("/:id", r.userRouter.UserDelete)
-		userGroup.PUT("/:id/roles", r.userRouter.UserUpdateRole)
 	}
 
 }

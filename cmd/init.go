@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/yiran15/api-server/base/apitypes"
@@ -16,6 +15,7 @@ import (
 	v1 "github.com/yiran15/api-server/service/v1"
 	"github.com/yiran15/api-server/store"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 func NewInitCmd() *cobra.Command {
@@ -43,6 +43,7 @@ func NewInitCmd() *cobra.Command {
 }
 
 type service struct {
+	db          *gorm.DB
 	userService v1.UserServicer
 	roleService v1.RoleServicer
 	apiService  v1.ApiServicer
@@ -85,6 +86,7 @@ func getService() (*service, func(), error) {
 	roleServicer := v1.NewRoleService(roleRepo, apiRepo, casbinStore, casbinManager, txManager)
 	apiServicer := v1.NewApiServicer(apiRepo)
 	return &service{
+			db:          db,
 			userService: userServicer,
 			roleService: roleServicer,
 			apiService:  apiServicer,
@@ -102,72 +104,49 @@ func initApplication(_ *cobra.Command, _ []string) error {
 	}
 	defer cleanup()
 
-	zap.L().Info("create admin api")
-	if err = service.apiService.CreateApi(ctx, &apitypes.ApiCreateRequest{
+	api := model.Api{}
+	apiCreateRequest := &apitypes.ApiCreateRequest{
 		Name:        "admin",
 		Path:        "*",
 		Method:      "*",
 		Description: "拥有所有接口权限",
-	}); err != nil {
-		return err
 	}
-	apis, err := service.apiService.ListApi(ctx, &apitypes.ApiListRequest{
-		Pagination: &apitypes.Pagination{
-			Page:     1,
-			PageSize: 10,
-		},
-		Name:   "admin",
-		Path:   "*",
-		Method: "*",
-	})
-	if err != nil {
-		return err
-	}
-	var adminApi *model.Api
-	for _, api := range apis.List {
-		if api.Name == "admin" {
-			adminApi = api
+	if err = service.db.Model(&model.Api{}).Where("name = ?", "admin").First(&api).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 	}
-	if adminApi == nil {
-		return errors.New("admin api not found")
+	if api.ID == 0 {
+		zap.L().Info("create admin api")
+		if err = service.apiService.CreateApi(ctx, apiCreateRequest); err != nil {
+			return err
+		}
+		if err = service.db.Model(&model.Api{}).Where("name = ?", "admin").First(&api).Error; err != nil {
+			return err
+		}
 	}
 
 	zap.L().Info("create admin role")
-	if err = service.roleService.CreateRole(ctx, &apitypes.RoleCreateRequest{
+	role := model.Role{}
+	roleCreateRequest := &apitypes.RoleCreateRequest{
 		Name:        "admin",
-		Description: "超级管理员",
+		Description: "拥有所有接口权限",
 		Apis: []int64{
-			adminApi.ID,
+			api.ID,
 		},
-	}); err != nil {
-		mysqlErr, ok := err.(*mysql.MySQLError)
-		if !ok {
-			return err
-		}
-		if mysqlErr.Number != 1062 {
+	}
+	if err = service.db.Model(&model.Role{}).Where("name = ?", "admin").First(&role).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
 	}
-
-	adminRoles, err := service.roleService.ListRole(ctx, &apitypes.RoleListRequest{
-		Pagination: &apitypes.Pagination{
-			Page:     1,
-			PageSize: 10,
-		},
-		Name: "admin",
-	})
-	if err != nil {
-		return err
-	}
-	var adminRole *model.Role
-	for _, v := range adminRoles.List {
-		if v.Name == "admin" {
-			adminRole = v
+	if role.ID == 0 {
+		if err = service.roleService.CreateRole(ctx, roleCreateRequest); err != nil {
+			return err
 		}
-	}
-	if adminRole == nil {
-		return errors.New("admin role not found")
+		if err = service.db.Model(&model.Role{}).Where("name = ?", "admin").First(&role).Error; err != nil {
+			return err
+		}
 	}
 
 	zap.L().Info("create admin user")
@@ -178,42 +157,29 @@ func initApplication(_ *cobra.Command, _ []string) error {
 		Password: "12345678",
 		Avatar:   "https://s3-imfile.feishucdn.com/static-resource/v1/v2_79ff6f58-f5c8-41c2-8ffb-8379d4e57acg~?image_size=noop&cut_type=&quality=&format=image&sticker_format=.webp",
 	}
-	if err = service.userService.CreateUser(ctx, adminUserReq); err != nil {
-		mysqlErr, ok := err.(*mysql.MySQLError)
-		if !ok {
+	user := model.User{}
+	if err = service.db.Model(&model.User{}).Where("name = ?", "admin").First(&user).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-		if mysqlErr.Number != 1062 {
+	}
+	if user.ID == 0 {
+		if err = service.userService.CreateUser(ctx, adminUserReq); err != nil {
+			return err
+		}
+		if err = service.db.Model(&model.User{}).Where("name = ?", "admin").First(&user).Error; err != nil {
 			return err
 		}
 	}
 
-	users, err := service.userService.ListUser(ctx, &apitypes.UserListRequest{
-		Pagination: &apitypes.Pagination{
-			Page:     1,
-			PageSize: 10,
+	userUpdateRequest := &apitypes.UserUpdateAdminRequest{
+		ID: user.ID,
+		RoleIds: []int64{
+			role.ID,
 		},
-		Name: "admin",
-	})
-	if err != nil {
+	}
+	if err = service.userService.UpdateUserByAdmin(ctx, userUpdateRequest); err != nil {
 		return err
-	}
-	var creaUser bool
-	for _, user := range users.List {
-		if user.Name == "admin" {
-			creaUser = true
-			if err := service.userService.UpdateRole(ctx, &apitypes.UserUpdateRoleRequest{
-				ID: user.ID,
-				RoleIds: []int64{
-					adminRole.ID,
-				},
-			}); err != nil {
-				return err
-			}
-		}
-	}
-	if !creaUser {
-		return errors.New("admin user not found")
 	}
 	zap.L().Info("init application success")
 	return nil

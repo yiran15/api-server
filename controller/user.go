@@ -14,7 +14,6 @@ type UserController interface {
 	UserDelete(c *gin.Context)
 	UserQuery(c *gin.Context)
 	UserList(c *gin.Context)
-	UserUpdateRole(c *gin.Context)
 	UserInfo(c *gin.Context)
 }
 
@@ -46,10 +45,6 @@ func (u *UserControllerImpl) UserUpdateByAdmin(c *gin.Context) {
 
 func (u *UserControllerImpl) UserUpdateBySelf(c *gin.Context) {
 	ResponseOnlySuccess(c, u.userServicer.UpdateUserBySelf, bindTypeJson)
-}
-
-func (u *UserControllerImpl) UserUpdateRole(c *gin.Context) {
-	ResponseOnlySuccess(c, u.userServicer.UpdateRole, bindTypeUri, bindTypeShouldBind)
 }
 
 func (u *UserControllerImpl) UserDelete(c *gin.Context) {
