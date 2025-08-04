@@ -134,7 +134,7 @@ func (s *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes.UserU
 
 	return s.updateRole(ctx, &apitypes.UserUpdateRoleRequest{
 		ID:      req.ID,
-		RoleIds: req.RoleIds,
+		RoleIds: *req.RoleIds,
 	})
 }
 
@@ -269,14 +269,18 @@ func (s *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRo
 		return err
 	}
 
-	if len(user.Roles) == 0 {
-		if err := s.userStore.AppendAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
-			return err
-		}
-	} else {
-		if err := s.userStore.ReplaceAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
-			return err
-		}
+	// if len(user.Roles) == 0 {
+	// 	if err := s.userStore.AppendAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
+	// 		return err
+	// 	}
+	// } else {
+	// 	if err := s.userStore.ReplaceAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	if err := s.userStore.ReplaceAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
+		return err
 	}
 
 	// 如果redis缓存中存在该用户的角色，需要删除
