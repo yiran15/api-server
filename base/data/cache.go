@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/yiran15/api-server/base/conf"
@@ -31,9 +32,12 @@ func initSingleRedis(ctx context.Context) (*redis.Client, error) {
 		return nil, err
 	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     host,
-		Password: password,
-		DB:       conf.GetRedisDB(),
+		Addr:            host,
+		Password:        password,
+		DB:              conf.GetRedisDB(),
+		PoolSize:        conf.GetRedisPoolSize(),
+		MinIdleConns:    conf.GetRedisMinIdleConns(),
+		ConnMaxLifetime: conf.GetRedisConnMaxLifetime(),
 	})
 	err = rdb.Ping(ctx).Err()
 	if err != nil {
@@ -67,6 +71,10 @@ func initSentinelRedis(ctx context.Context) (*redis.Client, error) {
 		SentinelPassword: sentPassword,
 		RouteByLatency:   true,
 		DB:               conf.GetRedisDB(),
+		PoolSize:         50,               // 最多50个连接
+		MinIdleConns:     20,               // 最少20个空闲连接
+		ConnMaxIdleTime:  10 * time.Minute, // 空闲 10 分钟关闭
+		ConnMaxLifetime:  30 * time.Minute, // 强制重连以避免连接老化
 	})
 	err = rdb.Ping(ctx).Err()
 	if err != nil {

@@ -156,6 +156,30 @@ func GetMysqlMaxLifetime() time.Duration {
 	return maxLifetime
 }
 
+func GetRedisPoolSize() int {
+	poolSize := viper.GetInt("redis.poolSize")
+	if poolSize == 0 {
+		return 50
+	}
+	return poolSize
+}
+
+func GetRedisMinIdleConns() int {
+	minIdleConns := viper.GetInt("redis.minIdleConns")
+	if minIdleConns == 0 {
+		return 20
+	}
+	return minIdleConns
+}
+
+func GetRedisConnMaxLifetime() time.Duration {
+	connMaxLifetime := viper.GetDuration("redis.connMaxLifetime")
+	if connMaxLifetime == 0 {
+		return 30 * time.Minute
+	}
+	return connMaxLifetime
+}
+
 func GetRedisPassword() (string, error) {
 	password := viper.GetString("redis.password")
 	if password == "" {
