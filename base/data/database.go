@@ -43,11 +43,8 @@ func NewDB() (*gorm.DB, func(), error) {
 		return nil, nil, fmt.Errorf("unable to obtain database connection, %w", err)
 	}
 
-	// 设置空闲连接池中连接的最大数量
-	sqlDB.SetMaxIdleConns(conf.GetMysqlMaxIdleConns())
-	// 设置数据库的最大打开连接数
 	sqlDB.SetMaxOpenConns(conf.GetMysqlMaxOpenConns())
-	// 设置连接的最大生命周期
+	sqlDB.SetMaxIdleConns(conf.GetMysqlMaxIdleConns())
 	sqlDB.SetConnMaxLifetime(conf.GetMysqlMaxLifetime())
 
 	zap.S().Info("db connect success")

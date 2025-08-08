@@ -9,10 +9,10 @@ import (
 
 func ValidateRoleApis(reqApis []int64, total int64, apis []*model.Api) error {
 	if len(reqApis) == 0 {
-		return errors.New("api ids is empty")
+		return errors.New("req api ids is empty")
 	}
 	if len(apis) == 0 {
-		return errors.New("apis is empty")
+		return fmt.Errorf("apis not found: %v", reqApis)
 	}
 	if len(reqApis) == int(total) {
 		return nil

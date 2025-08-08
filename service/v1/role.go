@@ -45,19 +45,21 @@ func (s *roleService) CreateRole(ctx context.Context, req *apitypes.RoleCreateRe
 	log.WithBody(ctx, req).Info("create role request")
 	req.Apis = helper.RemoveDuplicates(req.Apis)
 	var (
+		role  *model.Role
 		total int64
 		apis  []*model.Api
 		err   error
 		rules []*model.CasbinRule
 	)
 
-	if role, err := s.roleRepository.Query(ctx, store.Where("name", req.Name)); err != nil {
+	if role, err = s.roleRepository.Query(ctx, store.Where("name", req.Name)); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-		if role != nil {
-			return fmt.Errorf("role %s already exists", req.Name)
-		}
+	}
+
+	if role != nil {
+		return fmt.Errorf("role %s already exists", req.Name)
 	}
 
 	if len(req.Apis) > 0 {
