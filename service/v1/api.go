@@ -95,11 +95,11 @@ func (a *ApiService) ListApi(ctx context.Context, req *apitypes.ApiListRequest) 
 	)
 
 	if req.Name != "" {
-		where = store.Like("name", "%"+req.Name+"%")
+		where = store.Like("name", req.Name+"%")
 	} else if req.Path != "" {
-		where = store.Like("path", "%"+req.Path+"%")
+		where = store.Like("path", req.Path+"%")
 	} else if req.Method != "" {
-		where = store.Like("method", "%"+req.Method+"%")
+		where = store.Like("method", req.Method+"%")
 	}
 
 	if req.Sort != "" && req.Direction != "" {

@@ -15,19 +15,20 @@ type UserLoginResponse struct {
 }
 
 type UserCreateRequest struct {
-	Name     string `json:"name" validate:"required"`
-	NickName string `json:"nickName"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
-	Avatar   string `json:"avatar"`
-	Mobile   string `json:"mobile" validate:"omitempty,mobile"`
+	Name     string   `json:"name" validate:"required"`
+	NickName string   `json:"nickName"`
+	Email    string   `json:"email" validate:"required,email"`
+	Password string   `json:"password" validate:"required,min=8"`
+	Avatar   string   `json:"avatar"`
+	Mobile   string   `json:"mobile" validate:"omitempty,mobile"`
+	RolesID  *[]int64 `json:"rolesID"`
 }
 
 type UserUpdateAdminRequest struct {
 	ID int64 `uri:"id" validate:"required"`
 	*UserUpdateSelfRequest
 	Status  int      `json:"status" validate:"omitempty,oneof=1 2"`
-	RoleIds *[]int64 `json:"roleIds" validate:"omitempty"`
+	RolesID *[]int64 `json:"rolesID" validate:"omitempty"`
 }
 
 type UserUpdateSelfRequest struct {
@@ -50,12 +51,13 @@ type UserIdRequest struct {
 
 type UserListRequest struct {
 	*Pagination
-	Name      string `form:"name" validate:"user_list"`
-	Email     string `form:"email" validate:"omitempty,email"`
-	Mobile    string `form:"mobile" validate:"omitempty,mobile"`
-	Sort      string `form:"sort" binding:"omitempty,oneof=id name created_at updated_at nick_name email mobile"`
-	Direction string `form:"direction" binding:"omitempty,oneof=asc desc"`
-	Status    int    `form:"status" validate:"omitempty,oneof=0 1 2"`
+	Name       string `form:"name" validate:"user_list"`
+	Email      string `form:"email" validate:"omitempty,email"`
+	Mobile     string `form:"mobile" validate:"omitempty,mobile"`
+	Department string `form:"department"`
+	Sort       string `form:"sort" binding:"omitempty,oneof=id name created_at updated_at nick_name email mobile"`
+	Direction  string `form:"direction" binding:"omitempty,oneof=asc desc"`
+	Status     int    `form:"status" validate:"omitempty,oneof=0 1 2"`
 }
 
 type UserListResponse struct {
@@ -65,5 +67,5 @@ type UserListResponse struct {
 
 type UserUpdateRoleRequest struct {
 	ID      int64   `uri:"id" validate:"required"`
-	RoleIds []int64 `json:"roleIds" validate:"required"`
+	RolesID []int64 `json:"rolesID" validate:"required"`
 }
