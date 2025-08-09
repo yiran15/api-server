@@ -174,7 +174,7 @@ func initApplication(_ *cobra.Command, _ []string) error {
 
 	userUpdateRequest := &apitypes.UserUpdateAdminRequest{
 		ID: user.ID,
-		RoleIds: &[]int64{
+		RolesID: &[]int64{
 			role.ID,
 		},
 	}

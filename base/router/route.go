@@ -39,14 +39,14 @@ func (r *Router) RegisterRouter(engine *gin.Engine) {
 }
 
 func (r *Router) registerUserRouter(apiGroup *gin.RouterGroup) {
-	userGroup := apiGroup.Group("/users")
+	userGroup := apiGroup.Group("/user")
 	{
 		userGroup.POST("/login", r.userRouter.UserLogin)
-		userGroup.POST("/register", r.userRouter.UserCreate)
 		userGroup.Use(r.middleware.Auth())
 		userGroup.GET("/info", r.userRouter.UserInfo)
 		userGroup.PUT("/self", r.userRouter.UserUpdateBySelf)
 		userGroup.Use(r.middleware.AuthZ())
+		userGroup.POST("/register", r.userRouter.UserCreate)
 		userGroup.PUT("/:id", r.userRouter.UserUpdateByAdmin)
 		userGroup.POST("/logout", r.userRouter.UserLogout)
 		userGroup.GET("/:id", r.userRouter.UserQuery)
@@ -57,7 +57,7 @@ func (r *Router) registerUserRouter(apiGroup *gin.RouterGroup) {
 }
 
 func (r *Router) registerRoleRouter(apiGroup *gin.RouterGroup) {
-	roleGroup := apiGroup.Group("/roles")
+	roleGroup := apiGroup.Group("/role")
 	{
 		roleGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())
 		roleGroup.POST("", r.roleRouter.CreateRole)
@@ -70,7 +70,7 @@ func (r *Router) registerRoleRouter(apiGroup *gin.RouterGroup) {
 }
 
 func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {
-	baseGroup := apiGroup.Group("/apis")
+	baseGroup := apiGroup.Group("/api")
 	{
 		baseGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())
 		baseGroup.POST("", r.apiRouter.CreateApi)

@@ -216,7 +216,7 @@ func (s *roleService) ListRole(ctx context.Context, req *apitypes.RoleListReques
 		oder  string
 	)
 	if req.Name != "" {
-		where = store.Like("name", "%"+req.Name+"%")
+		where = store.Like("name", req.Name+"%")
 	}
 
 	if req.Sort != "" && req.Direction != "" {

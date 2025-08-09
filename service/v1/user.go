@@ -92,9 +92,13 @@ func (s *UserService) Logout(ctx context.Context) error {
 
 func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error {
 	var (
-		user *model.User
-		err  error
+		user  *model.User
+		err   error
+		total int64
+		roles []*model.Role
 	)
+	*req.RolesID = helper.RemoveDuplicates(*req.RolesID)
+
 	if user, err = s.userStore.Query(ctx, store.Where("email", req.Email), store.Where("status", 1)); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -109,6 +113,17 @@ func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRe
 	if err != nil {
 		return err
 	}
+
+	if req.RolesID != nil {
+		total, roles, err = s.roleStore.List(ctx, 0, 0, "", "", store.In("id", *req.RolesID))
+		if err != nil {
+			return err
+		}
+		if err = helper.ValidateRoleIds(*req.RolesID, roles, total); err != nil {
+			return err
+		}
+	}
+
 	user = &model.User{
 		Name:     req.Name,
 		NickName: req.NickName,
@@ -117,10 +132,18 @@ func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRe
 		Avatar:   req.Avatar,
 		Mobile:   req.Mobile,
 	}
-	if err = s.userStore.Create(ctx, user); err != nil {
-		return err
-	}
-	return nil
+
+	return s.tx.Transaction(ctx, func(ctx context.Context) error {
+		if err = s.userStore.Create(ctx, user); err != nil {
+			return err
+		}
+
+		if req.RolesID == nil {
+			return nil
+		}
+
+		return s.userStore.AppendAssociation(ctx, user, model.PreloadRoles, roles)
+	})
 }
 
 func (s *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
@@ -128,13 +151,13 @@ func (s *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes.UserU
 		return err
 	}
 
-	if req.RoleIds == nil {
+	if req.RolesID == nil {
 		return nil
 	}
 
 	return s.updateRole(ctx, &apitypes.UserUpdateRoleRequest{
 		ID:      req.ID,
-		RoleIds: *req.RoleIds,
+		RolesID: *req.RolesID,
 	})
 }
 
@@ -156,7 +179,11 @@ func (s *UserService) DeleteUser(ctx context.Context, req *apitypes.IDRequest) e
 	if err != nil {
 		return err
 	}
-	return s.userStore.Delete(ctx, user)
+	if err := s.userStore.Delete(ctx, user); err != nil {
+		return err
+	}
+
+	return s.userStore.ClearAssociation(ctx, user, model.PreloadRoles)
 }
 
 func (s *UserService) QueryUser(ctx context.Context, req *apitypes.IDRequest) (*model.User, error) {
@@ -184,12 +211,15 @@ func (s *UserService) ListUser(ctx context.Context, req *apitypes.UserListReques
 		filed     string
 		oder      string
 	)
+
 	if req.Name != "" {
-		likeOpt = store.Like("name", "%"+req.Name+"%")
+		likeOpt = store.Like("name", req.Name+"%")
 	} else if req.Email != "" {
-		likeOpt = store.Like("email", "%"+req.Email+"%")
+		likeOpt = store.Like("email", req.Email+"%")
 	} else if req.Mobile != "" {
-		likeOpt = store.Like("mobile", "%"+req.Mobile+"%")
+		likeOpt = store.Like("mobile", req.Mobile+"%")
+	} else if req.Department != "" {
+		likeOpt = store.Like("department", req.Department+"%")
 	}
 
 	if req.Status != 0 {
@@ -254,30 +284,20 @@ func (s *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRo
 		err   error
 		roles []*model.Role
 	)
-	req.RoleIds = helper.RemoveDuplicates(req.RoleIds)
+	req.RolesID = helper.RemoveDuplicates(req.RolesID)
 	user, err := s.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
 	if err != nil {
 		return err
 	}
 
-	total, roles, err = s.roleStore.List(ctx, 0, 0, "", "", store.In("id", req.RoleIds))
+	total, roles, err = s.roleStore.List(ctx, 0, 0, "", "", store.In("id", req.RolesID))
 	if err != nil {
 		return err
 	}
 
-	if err = helper.ValidateRoleIds(req.RoleIds, roles, total); err != nil {
+	if err = helper.ValidateRoleIds(req.RolesID, roles, total); err != nil {
 		return err
 	}
-
-	// if len(user.Roles) == 0 {
-	// 	if err := s.userStore.AppendAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
-	// 		return err
-	// 	}
-	// } else {
-	// 	if err := s.userStore.ReplaceAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
-	// 		return err
-	// 	}
-	// }
 
 	if err := s.userStore.ReplaceAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
 		return err

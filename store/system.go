@@ -15,6 +15,7 @@ type UserStorer interface {
 	List(ctx context.Context, page, pageSize int, colum, oder string, opts ...Option) (total int64, objs []*model.User, err error)
 	AppendAssociation(ctx context.Context, model *model.User, objName string, obj any) error
 	ReplaceAssociation(ctx context.Context, model *model.User, objName string, obj any) error
+	ClearAssociation(ctx context.Context, model *model.User, objName string) error
 }
 
 func NewUserStore(dbProvider DBProviderInterface) UserStorer {
