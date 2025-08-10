@@ -32,12 +32,13 @@ type UserUpdateAdminRequest struct {
 }
 
 type UserUpdateSelfRequest struct {
-	Name     string `json:"name"`
-	NickName string `json:"nickName"`
-	Email    string `json:"email" validate:"omitempty,email"`
-	Password string `json:"password" validate:"omitempty,min=8"`
-	Avatar   string `json:"avatar"`
-	Mobile   string `json:"mobile" validate:"omitempty,mobile"`
+	Name        string `json:"name"`
+	NickName    string `json:"nickName"`
+	Email       string `json:"email" validate:"omitempty,email"`
+	OldPassword string `json:"oldPassword" validate:"omitempty,min=8"`
+	Password    string `json:"password" validate:"omitempty,min=8"`
+	Avatar      string `json:"avatar"`
+	Mobile      string `json:"mobile" validate:"omitempty,mobile"`
 }
 
 type UserUpdateStatusRequest struct {

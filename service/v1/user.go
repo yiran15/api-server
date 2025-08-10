@@ -147,7 +147,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRe
 }
 
 func (s *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
-	if err := s.updateUser(ctx, req); err != nil {
+	if err := s.updateUser(ctx, nil, req); err != nil {
 		return err
 	}
 
@@ -167,10 +167,20 @@ func (s *UserService) UpdateUserBySelf(ctx context.Context, req *apitypes.UserUp
 	if err != nil {
 		return err
 	}
+	user, err := s.userStore.Query(ctx, store.Where("id", mc.UserID))
+	if err != nil {
+		return err
+	}
+	if req.OldPassword == "" {
+		return errors.New("old password is required")
+	}
+	if !s.checkPasswordHash(req.OldPassword, user.Password) {
+		return errors.New("invalid old password")
+	}
 	newReq := new(apitypes.UserUpdateAdminRequest)
 	newReq.ID = mc.UserID
 	newReq.UserUpdateSelfRequest = req
-	return s.updateUser(ctx, newReq)
+	return s.updateUser(ctx, user, newReq)
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, req *apitypes.IDRequest) error {
@@ -248,14 +258,18 @@ func (s *UserService) ListUser(ctx context.Context, req *apitypes.UserListReques
 	return res, nil
 }
 
-func (s *UserService) updateUser(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
-	user, err := s.userStore.Query(ctx, store.Where("id", req.ID))
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf("user %d not found", req.ID)
+func (s *UserService) updateUser(ctx context.Context, user *model.User, req *apitypes.UserUpdateAdminRequest) error {
+	var err error
+	if user == nil {
+		user, err = s.userStore.Query(ctx, store.Where("id", req.ID))
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("user %d not found", req.ID)
+			}
+			return err
 		}
-		return err
 	}
+
 	if req.UserUpdateSelfRequest != nil {
 		user.Name = req.UserUpdateSelfRequest.Name
 		user.NickName = req.UserUpdateSelfRequest.NickName
