@@ -43,12 +43,12 @@ func (r *Router) registerUserRouter(apiGroup *gin.RouterGroup) {
 	{
 		userGroup.POST("/login", r.userRouter.UserLogin)
 		userGroup.Use(r.middleware.Auth())
+		userGroup.POST("/logout", r.userRouter.UserLogout)
 		userGroup.GET("/info", r.userRouter.UserInfo)
 		userGroup.PUT("/self", r.userRouter.UserUpdateBySelf)
 		userGroup.Use(r.middleware.AuthZ())
 		userGroup.POST("/register", r.userRouter.UserCreate)
 		userGroup.PUT("/:id", r.userRouter.UserUpdateByAdmin)
-		userGroup.POST("/logout", r.userRouter.UserLogout)
 		userGroup.GET("/:id", r.userRouter.UserQuery)
 		userGroup.GET("", r.userRouter.UserList)
 		userGroup.DELETE("/:id", r.userRouter.UserDelete)

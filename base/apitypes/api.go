@@ -5,7 +5,7 @@ import "github.com/yiran15/api-server/model"
 type ApiCreateRequest struct {
 	Name        string `json:"name" validate:"required"`
 	Path        string `json:"path" validate:"required,uri"`
-	Method      string `json:"method" validate:"required,oneof=GET POST PUT DELETE"`
+	Method      string `json:"method" validate:"required,oneof=GET POST PUT DELETE *"`
 	Description string `json:"description"`
 }
 
