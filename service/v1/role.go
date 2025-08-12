@@ -212,8 +212,8 @@ func (s *roleService) ListRole(ctx context.Context, req *apitypes.RoleListReques
 	log.WithBody(ctx, req).Info("list role request")
 	var (
 		where store.Option
-		colum string
-		oder  string
+		colum = "id"
+		oder  = "desc"
 	)
 	if req.Name != "" {
 		where = store.Like("name", req.Name+"%")

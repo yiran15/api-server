@@ -90,8 +90,8 @@ func (a *ApiService) ListApi(ctx context.Context, req *apitypes.ApiListRequest) 
 	log.WithBody(ctx, req).Info("list api request")
 	var (
 		where store.Option
-		colum string
-		oder  string
+		colum = "id"
+		oder  = "desc"
 	)
 
 	if req.Name != "" {

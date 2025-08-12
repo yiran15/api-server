@@ -221,8 +221,8 @@ func (s *UserService) ListUser(ctx context.Context, req *apitypes.UserListReques
 	var (
 		likeOpt   store.Option
 		statusOpt store.Option
-		filed     string
-		oder      string
+		filed     = "id"
+		oder      = "desc"
 	)
 
 	if req.Name != "" {
@@ -244,7 +244,7 @@ func (s *UserService) ListUser(ctx context.Context, req *apitypes.UserListReques
 		oder = req.Direction
 	}
 
-	total, objs, err := s.userStore.List(ctx, req.Page, req.PageSize, filed, oder, likeOpt, statusOpt, store.Preload(model.PreloadRoles))
+	total, objs, err := s.userStore.List(ctx, req.Page, req.PageSize, filed, oder, likeOpt, statusOpt)
 	if err != nil {
 		return nil, err
 	}
