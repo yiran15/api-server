@@ -33,7 +33,6 @@ func NewApiServicer(apiStore store.ApiStorer) ApiServicer {
 }
 
 func (a *ApiService) CreateApi(ctx context.Context, req *apitypes.ApiCreateRequest) error {
-	log.WithBody(ctx, req).Info("create api request")
 	if api, err := a.apiStore.Query(ctx, store.Where("name", req.Name)); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -52,7 +51,6 @@ func (a *ApiService) CreateApi(ctx context.Context, req *apitypes.ApiCreateReque
 }
 
 func (a *ApiService) UpdateApi(ctx context.Context, req *apitypes.ApiUpdateRequest) error {
-	log.WithBody(ctx, req).Info("update api request")
 	api, err := a.apiStore.Query(ctx, store.Where("id", req.ID))
 	if err != nil {
 		return err
@@ -62,7 +60,6 @@ func (a *ApiService) UpdateApi(ctx context.Context, req *apitypes.ApiUpdateReque
 }
 
 func (a *ApiService) DeleteApi(ctx context.Context, req *apitypes.IDRequest) error {
-	log.WithBody(ctx, req).Info("delete api request")
 	api, err := a.apiStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
 	if err != nil {
 		return err
@@ -82,12 +79,10 @@ func (a *ApiService) DeleteApi(ctx context.Context, req *apitypes.IDRequest) err
 }
 
 func (a *ApiService) QueryApi(ctx context.Context, req *apitypes.IDRequest) (*model.Api, error) {
-	log.WithBody(ctx, req).Info("query api request")
 	return a.apiStore.Query(ctx, store.Where("id", req.ID))
 }
 
 func (a *ApiService) ListApi(ctx context.Context, req *apitypes.ApiListRequest) (*apitypes.ApiListResponse, error) {
-	log.WithBody(ctx, req).Info("list api request")
 	var (
 		where store.Option
 		colum = "id"
