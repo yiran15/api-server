@@ -119,7 +119,7 @@ func (m *Middleware) getClaimsFromCtx(c *gin.Context) (*jwt.JwtClaims, error) {
 func (m *Middleware) getRolesByUser(c *gin.Context, claims *jwt.JwtClaims) ([]string, error) {
 	ctx := c.Request.Context()
 
-	roles, err := m.cacheImpl.GetSet(ctx, store.RoleType, claims.ID)
+	roles, err := m.cacheImpl.GetSet(ctx, store.RoleType, claims.UserID)
 	if err != nil {
 		log.WithRequestID(ctx).Error("authz get role cache failed", zap.Error(err))
 		return nil, err
@@ -146,7 +146,7 @@ func (m *Middleware) getRolesByUser(c *gin.Context, claims *jwt.JwtClaims) ([]st
 		roleNames[i] = r.Name
 	}
 
-	if err := m.cacheImpl.SetSet(ctx, store.RoleType, claims.ID, roleNames, nil); err != nil {
+	if err := m.cacheImpl.SetSet(ctx, store.RoleType, claims.UserID, roleNames, nil); err != nil {
 		log.WithRequestID(ctx).Error("authz set role cache failed", zap.Error(err))
 	}
 
