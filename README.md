@@ -24,13 +24,13 @@ GO 编写的 WEB 框架，此框架基于流行的`Gin`框架构建。
 ## 功能
 
 - 用户管理: 增删改查
-![用户管理](./docs/img/user.png)
+![用户管理](docs/img/user.png)
 
 - 角色管理: 增删改查
-![角色管理](./docs/img/role.png)
+![角色管理](docs/img/role.png)
 
 - 接口权限管理: 增删改查
-![接口权限管理](./docs/img/api.png)
+![接口权限管理](docs/img/api.png)
 
 ## 可观测性
 
@@ -38,7 +38,7 @@ GO 编写的 WEB 框架，此框架基于流行的`Gin`框架构建。
 
 使用 [阿里云 otel](https://github.com/alibaba/loongsuite-go-agent) 构建镜像，自动注入`trace`、`metrics`。
 
-## 配置 trace & metrics 导出
+### 配置 trace & metrics 导出
 
 - OTEL_EXPORTER_OTLP_ENDPOINT: otlp 服务地址
 - OTEL_EXPORTER_OTLP_PROTOCOL: otlp 服务协议
@@ -66,11 +66,11 @@ services:
 
 ### Trace
 
-![Trace](./docs/img/trace.png)
+![Trace](docs/img/trace.png)
 
 ### Metrics
 
-![Metrics](./docs/img/metrics.png)
+![Metrics](docs/img/metrics.png)
 
 ## 部署
 

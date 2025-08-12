@@ -68,8 +68,8 @@ func (s *UserService) Login(ctx context.Context, req *apitypes.UserLoginRequest)
 		var roles []any
 		for _, role := range user.Roles {
 			roles = append(roles, role.Name)
-			if err := s.cacheStore.SetSet(ctx, store.RoleType, user.Name, roles, nil); err != nil {
-				log.WithRequestID(ctx).Error("set role cache error", zap.String("roleName", role.Name), zap.Any("roles", roles), zap.Error(err))
+			if err := s.cacheStore.SetSet(ctx, store.RoleType, user.ID, roles, nil); err != nil {
+				log.WithRequestID(ctx).Error("set role cache error", zap.Int64("userID", user.ID), zap.Any("roles", roles), zap.Error(err))
 				return nil, err
 			}
 		}
@@ -341,7 +341,7 @@ func (s *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRo
 		}
 	}()
 
-	return s.cacheStore.SetSet(ctx, store.RoleType, user.Name, roleNames, nil)
+	return s.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil)
 }
 
 // hashPassword 对密码进行 Bcrypt 哈希
