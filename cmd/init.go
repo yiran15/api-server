@@ -104,48 +104,83 @@ func initApplication(_ *cobra.Command, _ []string) error {
 	}
 	defer cleanup()
 
-	api := model.Api{}
-	apiCreateRequest := &apitypes.ApiCreateRequest{
-		Name:        "admin",
-		Path:        "*",
-		Method:      "*",
-		Description: "拥有所有接口权限",
+	apis := []apitypes.ApiCreateRequest{
+		{
+			Name:        "admin",
+			Path:        "*",
+			Method:      "*",
+			Description: "拥有所有接口权限",
+		},
+		{
+			Name:        "readOnly",
+			Path:        "*",
+			Method:      "GET",
+			Description: "只读接口权限",
+		},
 	}
-	if err = service.db.Model(&model.Api{}).Where("name = ?", "admin").First(&api).Error; err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
+
+	var (
+		adminApi    model.Api
+		readOnlyApi model.Api
+	)
+	for _, api := range apis {
+		var dbApi model.Api
+		if err = service.db.Model(&dbApi).Where("name = ?", api.Name).First(&dbApi).Error; err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
 		}
-	}
-	if api.ID == 0 {
-		zap.L().Info("create admin api")
-		if err = service.apiService.CreateApi(ctx, apiCreateRequest); err != nil {
-			return err
+		if dbApi.ID == 0 {
+			zap.L().Info("create api", zap.String("name", api.Name), zap.String("path", api.Path), zap.String("method", api.Method))
+			if err = service.apiService.CreateApi(ctx, &api); err != nil {
+				return err
+			}
+			if err = service.db.Model(&model.Api{}).Where("name = ?", api.Name).First(&dbApi).Error; err != nil {
+				return err
+			}
 		}
-		if err = service.db.Model(&model.Api{}).Where("name = ?", "admin").First(&api).Error; err != nil {
-			return err
+		if api.Name == "admin" {
+			adminApi = dbApi
+		} else {
+			readOnlyApi = dbApi
 		}
 	}
 
 	zap.L().Info("create admin role")
-	role := model.Role{}
-	roleCreateRequest := &apitypes.RoleCreateRequest{
-		Name:        "admin",
-		Description: "拥有所有接口权限",
-		Apis: []int64{
-			api.ID,
+	var adminRole model.Role
+	roleCreateRequest := []apitypes.RoleCreateRequest{
+		{
+			Name:        "admin",
+			Description: "所有接口权限",
+			Apis: []int64{
+				adminApi.ID,
+			},
+		},
+		{
+			Name:        "readOnly",
+			Description: "只读接口权限",
+			Apis: []int64{
+				readOnlyApi.ID,
+			},
 		},
 	}
-	if err = service.db.Model(&model.Role{}).Where("name = ?", "admin").First(&role).Error; err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return err
+	for _, roleCreateRequest := range roleCreateRequest {
+		var dbRole model.Role
+		if err = service.db.Model(&model.Role{}).Where("name = ?", roleCreateRequest.Name).First(&dbRole).Error; err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
 		}
-	}
-	if role.ID == 0 {
-		if err = service.roleService.CreateRole(ctx, roleCreateRequest); err != nil {
-			return err
+		if dbRole.ID == 0 {
+			if err = service.roleService.CreateRole(ctx, &roleCreateRequest); err != nil {
+				return err
+			}
+			if err = service.db.Model(&model.Role{}).Where("name = ?", roleCreateRequest.Name).First(&dbRole).Error; err != nil {
+				return err
+			}
 		}
-		if err = service.db.Model(&model.Role{}).Where("name = ?", "admin").First(&role).Error; err != nil {
-			return err
+		if roleCreateRequest.Name == "admin" {
+			adminRole = dbRole
 		}
 	}
 
@@ -175,7 +210,7 @@ func initApplication(_ *cobra.Command, _ []string) error {
 	userUpdateRequest := &apitypes.UserUpdateAdminRequest{
 		ID: user.ID,
 		RolesID: &[]int64{
-			role.ID,
+			adminRole.ID,
 		},
 	}
 	if err = service.userService.UpdateUserByAdmin(ctx, userUpdateRequest); err != nil {
