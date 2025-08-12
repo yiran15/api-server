@@ -48,7 +48,6 @@ func NewUserService(userStore store.UserStorer, roleStore store.RoleStorer, cach
 }
 
 func (s *UserService) Login(ctx context.Context, req *apitypes.UserLoginRequest) (*apitypes.UserLoginResponse, error) {
-	log.WithBody(ctx, req).Info("login request")
 	user, err := s.userStore.Query(ctx, store.Where("email", req.Email), store.Where("status", 1), store.Preload(model.PreloadRoles))
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -69,8 +68,8 @@ func (s *UserService) Login(ctx context.Context, req *apitypes.UserLoginRequest)
 		var roles []any
 		for _, role := range user.Roles {
 			roles = append(roles, role.Name)
-			if err := s.cacheStore.SetSet(ctx, store.RoleType, user.Name, roles, nil); err != nil {
-				log.WithRequestID(ctx).Error("set role cache error", zap.String("roleName", role.Name), zap.Any("roles", roles), zap.Error(err))
+			if err := s.cacheStore.SetSet(ctx, store.RoleType, user.ID, roles, nil); err != nil {
+				log.WithRequestID(ctx).Error("set role cache error", zap.Int64("userID", user.ID), zap.Any("roles", roles), zap.Error(err))
 				return nil, err
 			}
 		}
@@ -165,7 +164,6 @@ func (s *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes.UserU
 }
 
 func (s *UserService) UpdateUserBySelf(ctx context.Context, req *apitypes.UserUpdateSelfRequest) error {
-	log.WithBody(ctx, req).Info("update user request")
 	mc, err := s.jwt.GetUser(ctx)
 	if err != nil {
 		return err
@@ -187,7 +185,6 @@ func (s *UserService) UpdateUserBySelf(ctx context.Context, req *apitypes.UserUp
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, req *apitypes.IDRequest) error {
-	log.WithBody(ctx, req).Info("delete user request")
 	user, err := s.userStore.Query(ctx, store.Where("id", req.ID))
 	if err != nil {
 		return err
@@ -200,7 +197,6 @@ func (s *UserService) DeleteUser(ctx context.Context, req *apitypes.IDRequest) e
 }
 
 func (s *UserService) QueryUser(ctx context.Context, req *apitypes.IDRequest) (*model.User, error) {
-	log.WithBody(ctx, req).Info("query user request")
 	return s.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
 }
 
@@ -217,7 +213,6 @@ func (s *UserService) Info(ctx context.Context) (*model.User, error) {
 }
 
 func (s *UserService) ListUser(ctx context.Context, req *apitypes.UserListRequest) (*apitypes.UserListResponse, error) {
-	log.WithBody(ctx, req).Info("list user request")
 	var (
 		likeOpt   store.Option
 		statusOpt store.Option
@@ -295,7 +290,6 @@ func (s *UserService) updateUser(ctx context.Context, user *model.User, req *api
 }
 
 func (s *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRoleRequest) error {
-	log.WithBody(ctx, req).Info("update user role request")
 	var (
 		total int64
 		err   error
@@ -347,7 +341,7 @@ func (s *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRo
 		}
 	}()
 
-	return s.cacheStore.SetSet(ctx, store.RoleType, user.Name, roleNames, nil)
+	return s.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil)
 }
 
 // hashPassword 对密码进行 Bcrypt 哈希

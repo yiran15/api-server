@@ -8,7 +8,6 @@ import (
 
 	"github.com/yiran15/api-server/base/apitypes"
 	"github.com/yiran15/api-server/base/helper"
-	"github.com/yiran15/api-server/base/log"
 	"github.com/yiran15/api-server/model"
 	"github.com/yiran15/api-server/pkg/casbin"
 	"github.com/yiran15/api-server/store"
@@ -42,7 +41,6 @@ func NewRoleService(roleRepository store.RoleStorer, apiRepository store.ApiStor
 }
 
 func (s *roleService) CreateRole(ctx context.Context, req *apitypes.RoleCreateRequest) error {
-	log.WithBody(ctx, req).Info("create role request")
 	req.Apis = helper.RemoveDuplicates(req.Apis)
 	var (
 		role  *model.Role
@@ -102,7 +100,6 @@ func (s *roleService) CreateRole(ctx context.Context, req *apitypes.RoleCreateRe
 }
 
 func (s *roleService) UpdateRole(ctx context.Context, req *apitypes.RoleUpdateRequest) error {
-	log.WithBody(ctx, req).Info("update role request")
 	var (
 		total int64
 		apis  []*model.Api
@@ -165,7 +162,6 @@ func (s *roleService) UpdateRole(ctx context.Context, req *apitypes.RoleUpdateRe
 }
 
 func (s *roleService) DeleteRole(ctx context.Context, req *apitypes.IDRequest) error {
-	log.WithBody(ctx, req).Info("delete role request")
 	role, err := s.roleRepository.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadUsers))
 	if err != nil {
 		return err
@@ -204,12 +200,10 @@ func (s *roleService) DeleteRole(ctx context.Context, req *apitypes.IDRequest) e
 }
 
 func (s *roleService) QueryRole(ctx context.Context, req *apitypes.IDRequest) (*model.Role, error) {
-	log.WithBody(ctx, req).Info("query role request")
 	return s.roleRepository.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadApis))
 }
 
 func (s *roleService) ListRole(ctx context.Context, req *apitypes.RoleListRequest) (*apitypes.RoleListResponse, error) {
-	log.WithBody(ctx, req).Info("list role request")
 	var (
 		where store.Option
 		colum = "id"

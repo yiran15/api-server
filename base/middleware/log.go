@@ -12,7 +12,7 @@ import (
 // ZapLogger 返回一个 Gin 中间件，用于记录请求日志
 func (m *Middleware) ZapLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		start := time.Now() // 请求开始时间
+		start := time.Now()
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
 		c.Next()
