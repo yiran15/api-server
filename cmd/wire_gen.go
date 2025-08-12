@@ -62,7 +62,7 @@ func InitApplication() (*app.Application, func(), error) {
 	apiServicer := v1.NewApiServicer(apiStorer)
 	apiController := controller.NewApiController(apiServicer)
 	authChecker := casbin.NewAuthChecker(enforcer)
-	middlewareMiddleware := middleware.NewMiddleware(generateToken, authChecker, cacheStore)
+	middlewareMiddleware := middleware.NewMiddleware(generateToken, authChecker, cacheStore, userStorer)
 	routerRouter := router.NewRouter(userController, roleController, apiController, middlewareMiddleware)
 	engine, err := server.NewHttpServer(routerRouter)
 	if err != nil {

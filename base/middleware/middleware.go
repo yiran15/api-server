@@ -19,12 +19,14 @@ type Middleware struct {
 	jwtImpl   jwt.JwtInterface
 	authZImpl casbin.AuthChecker
 	cacheImpl store.CacheStorer
+	userStore store.UserStorer
 }
 
-func NewMiddleware(jwtImpl jwt.JwtInterface, authZImpl casbin.AuthChecker, cacheImpl store.CacheStorer) *Middleware {
+func NewMiddleware(jwtImpl jwt.JwtInterface, authZImpl casbin.AuthChecker, cacheImpl store.CacheStorer, userStore store.UserStorer) *Middleware {
 	return &Middleware{
 		jwtImpl:   jwtImpl,
 		authZImpl: authZImpl,
 		cacheImpl: cacheImpl,
+		userStore: userStore,
 	}
 }
