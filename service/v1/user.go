@@ -97,7 +97,10 @@ func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRe
 		total int64
 		roles []*model.Role
 	)
-	*req.RolesID = helper.RemoveDuplicates(*req.RolesID)
+
+	if req.RolesID != nil {
+		*req.RolesID = helper.RemoveDuplicates(*req.RolesID)
+	}
 
 	if user, err = s.userStore.Query(ctx, store.Where("email", req.Email), store.Where("status", 1)); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
