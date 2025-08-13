@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/yiran15/api-server/base/apitypes"
+	"github.com/yiran15/api-server/base/constant"
 	"github.com/yiran15/api-server/base/helper"
 	"github.com/yiran15/api-server/base/log"
 	"github.com/yiran15/api-server/model"
@@ -64,15 +65,18 @@ func (s *UserService) Login(ctx context.Context, req *apitypes.UserLoginRequest)
 		return nil, err
 	}
 
-	if len(user.Roles) > 0 {
-		var roles []any
-		for _, role := range user.Roles {
-			roles = append(roles, role.Name)
-			if err := s.cacheStore.SetSet(ctx, store.RoleType, user.ID, roles, nil); err != nil {
-				log.WithRequestID(ctx).Error("set role cache error", zap.Int64("userID", user.ID), zap.Any("roles", roles), zap.Error(err))
-				return nil, err
-			}
+	if len(user.Roles) == 0 {
+		if err := s.cacheStore.SetSet(ctx, store.RoleType, user.ID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
+			log.WithRequestID(ctx).Error("login set empty role cache error", zap.Int64("userID", user.ID), zap.Error(err))
 		}
+	}
+
+	roleNames := make([]any, 0, len(user.Roles))
+	for _, role := range user.Roles {
+		roleNames = append(roleNames, role.Name)
+	}
+	if err := s.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil); err != nil {
+		log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", user.ID), zap.Any("roles", roleNames), zap.Error(err))
 	}
 
 	return &apitypes.UserLoginResponse{
@@ -86,7 +90,7 @@ func (s *UserService) Logout(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return s.cacheStore.DelKey(ctx, store.RoleType, mc.UserName)
+	return s.cacheStore.DelKey(ctx, store.RoleType, mc.UserID)
 }
 
 func (s *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error {
@@ -315,7 +319,7 @@ func (s *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRo
 	}
 
 	// 如果redis缓存中存在该用户的角色，需要删除
-	cacheRoles, err := s.cacheStore.GetSet(ctx, store.RoleType, user.Name)
+	cacheRoles, err := s.cacheStore.GetSet(ctx, store.RoleType, user.ID)
 	if err != nil {
 		return err
 	}
@@ -325,7 +329,7 @@ func (s *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRo
 		return nil
 	}
 
-	if err := s.cacheStore.DelKey(ctx, store.RoleType, user.Name); err != nil {
+	if err := s.cacheStore.DelKey(ctx, store.RoleType, user.ID); err != nil {
 		return err
 	}
 
@@ -336,8 +340,8 @@ func (s *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRo
 
 	defer func() {
 		time.Sleep(time.Second * 5)
-		if err := s.cacheStore.DelKey(ctx, store.RoleType, user.Name); err != nil {
-			log.WithRequestID(ctx).Error("del role cache error", zap.String("userName", user.Name), zap.Any("roleNames", roleNames), zap.Error(err))
+		if err := s.cacheStore.DelKey(ctx, store.RoleType, user.ID); err != nil {
+			log.WithRequestID(ctx).Error("del role cache error", zap.Int64("userID", user.ID), zap.Any("roleNames", roleNames), zap.Error(err))
 		}
 	}()
 
