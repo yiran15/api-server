@@ -13,75 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// func (m *Middleware) AuthZ() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 		var (
-// 			claims *jwt.JwtClaims
-// 			err    error
-// 			roles  []string
-// 			// roleNames []any
-// 			allow bool
-// 		)
-// 		if claims, err = m.jwtImpl.GetUser(c.Request.Context()); err != nil {
-// 			log.WithRequestID(c.Request.Context()).Error("get jwt claims by ctx failed")
-// 			m.Abort(c, http.StatusForbidden, constant.ErrNoPermission)
-// 			return
-// 		}
-
-// 		roles, err = m.cacheImpl.GetSet(c.Request.Context(), store.RoleType, claims.UserName)
-// 		if err != nil {
-// 			log.WithRequestID(c.Request.Context()).Error("get role cache failed", zap.Error(err))
-// 			m.Abort(c, http.StatusForbidden, constant.ErrNoPermission)
-// 			return
-// 		}
-// 		if len(roles) == 0 {
-// 			// user, err := m.userStore.Query(c.Request.Context(), store.Where("id", claims.UserID), store.Preload(model.PreloadRoles))
-// 			// if err != nil {
-// 			// 	log.WithRequestID(c.Request.Context()).Error("get user by id failed", zap.Error(err))
-// 			// 	m.Abort(c, http.StatusForbidden, constant.ErrNoPermission)
-// 			// 	return
-// 			// }
-// 			// if len(user.Roles) != 0 {
-// 			// 	roles = make([]string, len(user.Roles))
-// 			// 	for i := range user.Roles {
-// 			// 		roles[i] = user.Roles[i].Name
-// 			// 		roleNames = append(roleNames, user.Roles[i].Name)
-// 			// 	}
-// 			// }
-
-// 			// if err := m.cacheImpl.SetSet(c.Request.Context(), store.RoleType, claims.UserName, roleNames, nil); err != nil {
-// 			// 	log.WithRequestID(c.Request.Context()).Error("set role cache failed", zap.Error(err))
-// 			// }
-// 			log.WithRequestID(c.Request.Context()).Error("get role cache failed", zap.Error(err))
-// 			m.Abort(c, http.StatusForbidden, constant.ErrNoPermission)
-// 			return
-// 		}
-
-// 		if len(roles) == 0 {
-// 			log.WithRequestID(c.Request.Context()).Error("redis cache no role found", zap.String("userName", claims.UserName))
-// 			m.Abort(c, http.StatusForbidden, constant.ErrNoPermission)
-// 			return
-// 		}
-
-// 		for _, roleName := range roles {
-// 			if allow, err = m.authZImpl.Enforce(roleName, c.Request.URL.Path, c.Request.Method); err != nil {
-// 				m.Abort(c, http.StatusForbidden, err)
-// 				return
-// 			}
-// 			if allow {
-// 				break
-// 			}
-// 		}
-
-// 		if !allow {
-// 			m.Abort(c, http.StatusForbidden, constant.ErrNoPermission)
-// 			return
-// 		}
-
-// 		c.Next()
-// 	}
-// }
-
 func (m *Middleware) AuthZ() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, err := m.getClaimsFromCtx(c)
@@ -126,6 +57,9 @@ func (m *Middleware) getRolesByUser(c *gin.Context, claims *jwt.JwtClaims) ([]st
 	}
 
 	if len(roles) > 0 {
+		if len(roles) == 1 && roles[0] == constant.EmptyRoleSentinel {
+			return []string{}, nil
+		}
 		return roles, nil
 	}
 
@@ -136,7 +70,11 @@ func (m *Middleware) getRolesByUser(c *gin.Context, claims *jwt.JwtClaims) ([]st
 	}
 
 	if len(user.Roles) == 0 {
-		return nil, nil
+		// 缓存哨兵值，标记无角色
+		if err := m.cacheImpl.SetSet(ctx, store.RoleType, claims.UserID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
+			log.WithRequestID(ctx).Error("authz set empty role cache failed", zap.Error(err))
+		}
+		return []string{}, nil
 	}
 
 	roles = make([]string, len(user.Roles))

@@ -8,4 +8,5 @@ const (
 	AuthMidwareKey      = "user"
 	RequestIDHeader     = "X-Request-Id"
 	RequestIDContextKey = "requestID"
+	EmptyRoleSentinel   = "__empty__"
 )
