@@ -27,3 +27,14 @@ type ApiListResponse struct {
 	*ListResponse
 	List []*model.Api `json:"list"`
 }
+
+type ServerApiData struct {
+	ApiType []string             `json:"apiType"`
+	ApiInfo map[string][]ApiInfo `json:"apiInfo"`
+}
+
+type ApiInfo struct {
+	Method  string `json:"method"`
+	Path    string `json:"path"`
+	Handler string `json:"handler"`
+}

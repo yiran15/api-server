@@ -1,0 +1,835 @@
+definitions:
+  apitypes.Api:
+    properties:
+      handler:
+        type: string
+      method:
+        type: string
+      path:
+        type: string
+    type: object
+  apitypes.ApiCreateRequest:
+    properties:
+      description:
+        type: string
+      method:
+        enum:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - '*'
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+    required:
+    - method
+    - name
+    - path
+    type: object
+  apitypes.ApiListResponse:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/model.Api'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  apitypes.ApiUpdateRequest:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+    required:
+    - id
+    type: object
+  apitypes.IDRequest:
+    properties:
+      id:
+        type: integer
+    required:
+    - id
+    type: object
+  apitypes.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      msg:
+        type: string
+      requestId:
+        type: string
+    type: object
+  apitypes.RoleCreateRequest:
+    properties:
+      apis:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  apitypes.RoleListResponse:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/model.Role'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  apitypes.RoleUpdateRequest:
+    properties:
+      apis:
+        items:
+          type: integer
+        type: array
+      description:
+        type: string
+      id:
+        type: integer
+    required:
+    - id
+    type: object
+  apitypes.UserCreateRequest:
+    properties:
+      avatar:
+        type: string
+      email:
+        type: string
+      mobile:
+        type: string
+      name:
+        type: string
+      nickName:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      rolesID:
+        items:
+          type: integer
+        type: array
+    required:
+    - email
+    - name
+    - password
+    type: object
+  apitypes.UserListResponse:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/model.User'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  apitypes.UserLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  apitypes.UserLoginResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/model.User'
+    type: object
+  apitypes.UserUpdateAdminRequest:
+    properties:
+      avatar:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      mobile:
+        type: string
+      name:
+        type: string
+      nickName:
+        type: string
+      oldPassword:
+        minLength: 8
+        type: string
+      password:
+        minLength: 8
+        type: string
+      rolesID:
+        items:
+          type: integer
+        type: array
+      status:
+        enum:
+        - 1
+        - 2
+        type: integer
+    required:
+    - id
+    type: object
+  apitypes.UserUpdateSelfRequest:
+    properties:
+      avatar:
+        type: string
+      email:
+        type: string
+      mobile:
+        type: string
+      name:
+        type: string
+      nickName:
+        type: string
+      oldPassword:
+        minLength: 8
+        type: string
+      password:
+        minLength: 8
+        type: string
+    type: object
+  model.Api:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      method:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      roles:
+        items:
+          $ref: '#/definitions/model.Role'
+        type: array
+      updatedAt:
+        type: string
+    type: object
+  model.Role:
+    properties:
+      apis:
+        items:
+          $ref: '#/definitions/model.Api'
+        type: array
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
+        type: string
+      users:
+        items:
+          $ref: '#/definitions/model.User'
+        type: array
+    type: object
+  model.User:
+    properties:
+      avatar:
+        type: string
+      createdAt:
+        type: string
+      department:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      mobile:
+        type: string
+      name:
+        type: string
+      nickName:
+        type: string
+      roles:
+        items:
+          $ref: '#/definitions/model.Role'
+        type: array
+      status:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+host: 10.0.0.10:8080
+info:
+  contact: {}
+  description: api-server api docs.
+  title: Swagger API
+  version: "1.0"
+paths:
+  /api/v1/allApi:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有api
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/apitypes.Api'
+                  type: array
+              type: object
+      summary: 获取所有api
+      tags:
+      - API管理
+  /api/v1/api:
+    post:
+      consumes:
+      - application/json
+      description: 创建 API
+      parameters:
+      - description: 创建请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.ApiCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 创建 API
+      tags:
+      - API管理
+  /api/v1/api/:
+    get:
+      consumes:
+      - application/json
+      description: 使用分页查询 API 的信息, 支持根据 name 查询
+      parameters:
+      - enum:
+        - asc
+        - desc
+        in: query
+        name: direction
+        type: string
+      - enum:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        in: query
+        name: method
+        type: string
+      - in: query
+        name: name
+        type: string
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: pageSize
+        type: integer
+      - in: query
+        name: path
+        type: string
+      - enum:
+        - id
+        - name
+        - path
+        - method
+        - created_at
+        - updated_at
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/apitypes.ApiListResponse'
+              type: object
+      summary: API列表
+      tags:
+      - API管理
+  /api/v1/api/:id:
+    delete:
+      consumes:
+      - application/json
+      description: 删除 API
+      parameters:
+      - description: 删除请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.IDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 删除 API
+      tags:
+      - API管理
+    get:
+      consumes:
+      - application/json
+      description: 查询 API
+      parameters:
+      - description: 查询请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.IDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Api'
+              type: object
+      summary: 查询 API
+      tags:
+      - API管理
+    put:
+      consumes:
+      - application/json
+      description: 更新 API
+      parameters:
+      - description: 更新请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.ApiUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 更新 API
+      tags:
+      - API管理
+  /api/v1/role:
+    post:
+      consumes:
+      - application/json
+      description: 创建角色
+      parameters:
+      - description: 创建请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.RoleCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 创建角色
+      tags:
+      - 角色管理
+  /api/v1/role/:
+    get:
+      consumes:
+      - application/json
+      description: 使用分页查询角色的信息, 支持根据 name 查询
+      parameters:
+      - enum:
+        - asc
+        - desc
+        in: query
+        name: direction
+        type: string
+      - in: query
+        name: name
+        type: string
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: pageSize
+        type: integer
+      - enum:
+        - id
+        - name
+        - created_at
+        - updated_at
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/apitypes.RoleListResponse'
+              type: object
+      summary: 角色列表
+      tags:
+      - 角色管理
+  /api/v1/role/:id:
+    delete:
+      consumes:
+      - application/json
+      description: 删除角色, 不能删除有用户的角色
+      parameters:
+      - description: 删除请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.IDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 删除角色
+      tags:
+      - 角色管理
+    get:
+      consumes:
+      - application/json
+      description: 查询角色, 包括角色的权限
+      parameters:
+      - description: 查询请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.IDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Role'
+              type: object
+      summary: 查询角色
+      tags:
+      - 角色管理
+    put:
+      consumes:
+      - application/json
+      description: 更新角色, 并且可以更新角色的权限
+      parameters:
+      - description: 更新请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.RoleUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 更新角色
+      tags:
+      - 角色管理
+  /api/v1/user/:
+    get:
+      consumes:
+      - application/json
+      description: 使用分页查询用户的信息, 支持根据 name, email, mobile, department 查询
+      parameters:
+      - in: query
+        name: department
+        type: string
+      - enum:
+        - asc
+        - desc
+        in: query
+        name: direction
+        type: string
+      - in: query
+        name: email
+        type: string
+      - in: query
+        name: mobile
+        type: string
+      - in: query
+        name: name
+        type: string
+      - in: query
+        name: page
+        type: integer
+      - in: query
+        name: pageSize
+        type: integer
+      - enum:
+        - id
+        - name
+        - created_at
+        - updated_at
+        - nick_name
+        - email
+        - mobile
+        in: query
+        name: sort
+        type: string
+      - enum:
+        - 0
+        - 1
+        - 2
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/apitypes.UserListResponse'
+              type: object
+      summary: 用户列表
+      tags:
+      - 用户管理
+  /api/v1/user/:id:
+    delete:
+      consumes:
+      - application/json
+      description: 删除用户，只能管理员删除
+      parameters:
+      - description: 删除请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.IDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 用户删除
+      tags:
+      - 用户管理
+    get:
+      consumes:
+      - application/json
+      description: 使用 id 查询用户的信息和用户的角色
+      parameters:
+      - description: 查询请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.IDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+      summary: 用户查询
+      tags:
+      - 用户管理
+    put:
+      consumes:
+      - application/json
+      description: 更新用户信息，可以更新角色
+      parameters:
+      - description: 更新请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.UserUpdateAdminRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 用户更新
+      tags:
+      - 用户管理
+  /api/v1/user/info:
+    get:
+      consumes:
+      - application/json
+      description: 使用 id 查询用户的信息和用户的角色
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+      summary: 用户获取自己的信息
+      tags:
+      - 用户管理
+  /api/v1/user/logout:
+    post:
+      consumes:
+      - application/json
+      description: 用户注销，清空 Token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注销成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 用户注销
+      tags:
+      - 用户管理
+  /api/v1/user/register:
+    post:
+      consumes:
+      - application/json
+      description: 创建用户同时可以设置角色
+      parameters:
+      - description: 创建请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.UserCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 用户创建
+      tags:
+      - 用户管理
+  /api/v1/user/self:
+    put:
+      consumes:
+      - application/json
+      description: 更新用户信息，不能更新角色
+      parameters:
+      - description: 更新请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.UserUpdateSelfRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/apitypes.Response'
+      summary: 用户更新自己的信息
+      tags:
+      - 用户管理
+  /api/v1/users/login:
+    post:
+      consumes:
+      - application/json
+      description: 使用邮箱和密码登录，返回用户信息和 Token
+      parameters:
+      - description: 登录请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/apitypes.UserLoginResponse'
+              type: object
+      summary: 用户登录
+      tags:
+      - 用户管理
+swagger: "2.0"
