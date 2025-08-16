@@ -27,38 +27,117 @@ func NewUserController(userServicer v1.UserServicer) UserController {
 	}
 }
 
+// UserLogin 用户登录
+// @Summary 用户登录
+// @Description 使用邮箱和密码登录，返回用户信息和 Token
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param data body apitypes.UserLoginRequest true "登录请求参数"
+// @Success 200 {object} apitypes.Response{data=apitypes.UserLoginResponse} "登录成功"
+// @Router /api/v1/users/login [post]
 func (u *UserControllerImpl) UserLogin(c *gin.Context) {
 	ResponseWithData(c, u.userServicer.Login, bindTypeJson)
 }
 
+// UserLogout 用户注销
+// @Summary 用户注销
+// @Description 用户注销，清空 Token
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} apitypes.Response "注销成功"
+// @Router /api/v1/user/logout [post]
 func (u *UserControllerImpl) UserLogout(c *gin.Context) {
 	ResponseNoBind(c, u.userServicer.Logout)
 }
 
+// UserCreate 用户创建
+// @Summary 用户创建
+// @Description 创建用户同时可以设置角色
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param data body apitypes.UserCreateRequest true "创建请求参数"
+// @Success 200 {object} apitypes.Response "创建成功"
+// @Router /api/v1/user/register [post]
 func (u *UserControllerImpl) UserCreate(c *gin.Context) {
 	ResponseOnlySuccess(c, u.userServicer.CreateUser, bindTypeJson)
 }
 
+// UserUpdateByAdmin 用户更新
+// @Summary 用户更新
+// @Description 更新用户信息，可以更新角色
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param data body apitypes.UserUpdateAdminRequest true "更新请求参数"
+// @Success 200 {object} apitypes.Response "更新成功"
+// @Router /api/v1/user/:id [put]
 func (u *UserControllerImpl) UserUpdateByAdmin(c *gin.Context) {
 	ResponseOnlySuccess(c, u.userServicer.UpdateUserByAdmin, bindTypeUri, bindTypeJson)
 }
 
+// UserUpdateBySelf 用户更新自己的信息
+// @Summary 用户更新自己的信息
+// @Description 更新用户信息，不能更新角色
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param data body apitypes.UserUpdateSelfRequest true "更新请求参数"
+// @Success 200 {object} apitypes.Response "更新成功"
+// @Router /api/v1/user/self [put]
 func (u *UserControllerImpl) UserUpdateBySelf(c *gin.Context) {
 	ResponseOnlySuccess(c, u.userServicer.UpdateUserBySelf, bindTypeJson)
 }
 
+// UserDelete 用户删除
+// @Summary 用户删除
+// @Description 删除用户，只能管理员删除
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param data body apitypes.IDRequest true "删除请求参数"
+// @Success 200 {object} apitypes.Response "删除成功"
+// @Router /api/v1/user/:id [delete]
 func (u *UserControllerImpl) UserDelete(c *gin.Context) {
 	ResponseOnlySuccess(c, u.userServicer.DeleteUser, bindTypeUri)
 }
 
+// UserQuery 用户查询
+// @Summary 用户查询
+// @Description 使用 id 查询用户的信息和用户的角色
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param data body apitypes.IDRequest true "查询请求参数"
+// @Success 200 {object} apitypes.Response{data=model.User} "查询成功"
+// @Router /api/v1/user/:id [get]
 func (u *UserControllerImpl) UserQuery(c *gin.Context) {
 	ResponseWithData(c, u.userServicer.QueryUser, bindTypeUri)
 }
 
+// UserInfo 用户获取自己的信息
+// @Summary 用户获取自己的信息
+// @Description 使用 id 查询用户的信息和用户的角色
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} apitypes.Response{data=model.User} "查询成功"
+// @Router /api/v1/user/info [get]
 func (u *UserControllerImpl) UserInfo(c *gin.Context) {
 	ResponseWithDataNoBind(c, u.userServicer.Info)
 }
 
+// UserList 用户列表
+// @Summary 用户列表
+// @Description 使用分页查询用户的信息, 支持根据 name, email, mobile, department 查询
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param data query apitypes.UserListRequest true "查询请求参数"
+// @Success 200 {object} apitypes.Response{data=apitypes.UserListResponse} "登录成功"
+// @Router /api/v1/user/ [get]
 func (u *UserControllerImpl) UserList(c *gin.Context) {
 	ResponseWithData(c, u.userServicer.ListUser, bindTypeQuery)
 }

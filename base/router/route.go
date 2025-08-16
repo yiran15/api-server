@@ -2,8 +2,11 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/yiran15/api-server/base/middleware"
 	"github.com/yiran15/api-server/controller"
+	_ "github.com/yiran15/api-server/docs"
 )
 
 type RouterInterface interface {
@@ -33,6 +36,7 @@ func NewRouter(
 func (r *Router) RegisterRouter(engine *gin.Engine) {
 	engine.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsAllowAll), r.middleware.RequestID())
 	apiGroup := engine.Group("/api/v1")
+	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.registerUserRouter(apiGroup)
 	r.registerRoleRouter(apiGroup)
 	r.registerApiRouter(apiGroup)
@@ -53,7 +57,6 @@ func (r *Router) registerUserRouter(apiGroup *gin.RouterGroup) {
 		userGroup.GET("", r.userRouter.UserList)
 		userGroup.DELETE("/:id", r.userRouter.UserDelete)
 	}
-
 }
 
 func (r *Router) registerRoleRouter(apiGroup *gin.RouterGroup) {
@@ -73,10 +76,12 @@ func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {
 	baseGroup := apiGroup.Group("/api")
 	{
 		baseGroup.Use(r.middleware.Auth(), r.middleware.AuthZ())
+		baseGroup.GET("/serverApi", r.apiRouter.GetServerApi)
 		baseGroup.POST("", r.apiRouter.CreateApi)
 		baseGroup.PUT("/:id", r.apiRouter.UpdateApi)
 		baseGroup.DELETE("/:id", r.apiRouter.DeleteApi)
 		baseGroup.GET("/:id", r.apiRouter.QueryApi)
 		baseGroup.GET("", r.apiRouter.ListApi)
+
 	}
 }
