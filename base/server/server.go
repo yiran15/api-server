@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/yiran15/api-server/base/apitypes"
 	"github.com/yiran15/api-server/base/conf"
+	"github.com/yiran15/api-server/base/constant"
 	"github.com/yiran15/api-server/base/router"
 	"github.com/yiran15/api-server/controller"
 	"go.uber.org/zap"
@@ -61,5 +64,25 @@ func NewHttpServer(r router.RouterInterface) (*gin.Engine, error) {
 	controller.NewValidator()
 
 	r.RegisterRouter(engine)
+	var apiData apitypes.ServerApiData
+	apiData.ApiInfo = make(map[string][]apitypes.ApiInfo)
+	for _, v := range engine.Routes() {
+		if v.Path == "/swagger/*any" {
+			continue
+		}
+		api := strings.TrimPrefix(v.Path, "/")
+		apiType := strings.Split(api, "/")[2]
+		_, ok := apiData.ApiInfo[apiType]
+		if !ok {
+			apiData.ApiInfo[apiType] = make([]apitypes.ApiInfo, 0)
+			apiData.ApiType = append(apiData.ApiType, apiType)
+		}
+		apiData.ApiInfo[apiType] = append(apiData.ApiInfo[apiType], apitypes.ApiInfo{
+			Method:  v.Method,
+			Path:    v.Path,
+			Handler: v.Handler,
+		})
+	}
+	constant.ApiData = apiData
 	return engine, nil
 }
