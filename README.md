@@ -32,6 +32,12 @@ GO 编写的 WEB 框架，此框架基于流行的`Gin`框架构建。
 - 接口权限管理: 增删改查
 ![接口权限管理](docs/img/api.png)
 
+## API 文档
+
+支持 [swagger文档](https://swagger.io/)，访问地址：`http://127.0.0.1:8080/swagger/index.html`。
+
+![alt text](docs/img/swagger.png)
+
 ## 可观测性
 
 基于`otel`的可观测性，包括`trace`、`metrics`。

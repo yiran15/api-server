@@ -127,7 +127,7 @@ func responseError(c *gin.Context, err error) {
 }
 
 func responseSuccess(c *gin.Context, data any) {
-	c.JSON(http.StatusOK, apitypes.NewResponse(http.StatusOK, "success", c.GetString(constant.RequestIDContextKey), data))
+	c.JSON(http.StatusOK, apitypes.NewResponse(0, "success", c.GetString(constant.RequestIDContextKey), data))
 }
 
 func responseParamError(c *gin.Context, err error, errMsg string) {
