@@ -12,6 +12,7 @@ import (
 	"github.com/yiran15/api-server/base/log"
 	"github.com/yiran15/api-server/model"
 	"github.com/yiran15/api-server/pkg/jwt"
+	"github.com/yiran15/api-server/pkg/oauth"
 	"github.com/yiran15/api-server/store"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
@@ -28,23 +29,33 @@ type UserServicer interface {
 	DeleteUser(ctx context.Context, req *apitypes.IDRequest) error
 	QueryUser(ctx context.Context, req *apitypes.IDRequest) (*model.User, error)
 	ListUser(ctx context.Context, pagination *apitypes.UserListRequest) (*apitypes.UserListResponse, error)
+	FeishuServicer
+}
+
+type FeishuServicer interface {
+	FeiShuOAuthLogin(ctx context.Context) (string, error)
+	FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*model.FeiShuUser, error)
 }
 
 type UserService struct {
-	userStore  store.UserStorer
-	roleStore  store.RoleStorer
-	cacheStore store.CacheStorer
-	tx         store.TxManagerInterface
-	jwt        jwt.JwtInterface
+	userStore       store.UserStorer
+	roleStore       store.RoleStorer
+	cacheStore      store.CacheStorer
+	tx              store.TxManagerInterface
+	jwt             jwt.JwtInterface
+	feishuOauth     *oauth.FeishuOauth
+	feishuUserStore store.FeiShuUserStorer
 }
 
-func NewUserService(userStore store.UserStorer, roleStore store.RoleStorer, cacheStore store.CacheStorer, tx store.TxManagerInterface, jwt jwt.JwtInterface) UserServicer {
+func NewUserService(userStore store.UserStorer, roleStore store.RoleStorer, cacheStore store.CacheStorer, tx store.TxManagerInterface, jwt jwt.JwtInterface, feishuOauth *oauth.FeishuOauth, feishuUserStore store.FeiShuUserStorer) UserServicer {
 	return &UserService{
-		userStore:  userStore,
-		roleStore:  roleStore,
-		cacheStore: cacheStore,
-		tx:         tx,
-		jwt:        jwt,
+		userStore:       userStore,
+		roleStore:       roleStore,
+		cacheStore:      cacheStore,
+		tx:              tx,
+		jwt:             jwt,
+		feishuOauth:     feishuOauth,
+		feishuUserStore: feishuUserStore,
 	}
 }
 
@@ -362,4 +373,30 @@ func (s *UserService) hashPassword(password string) (string, error) {
 func (s *UserService) checkPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil // 如果没有错误，则匹配成功
+}
+
+func (s *UserService) FeiShuOAuthLogin(ctx context.Context) (string, error) {
+	return s.feishuOauth.GetAuthUrl(), nil
+}
+
+func (s *UserService) FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*model.FeiShuUser, error) {
+	token, err := s.feishuOauth.ExchangeToken(ctx, req.State, req.Code)
+	if err != nil {
+		return nil, err
+	}
+	feishuUser, err := s.feishuOauth.GetUserInfo(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := s.feishuUserStore.Query(ctx, store.Where("user_id", feishuUser.UserID), store.Preload(model.PreloadUsers))
+	if err != nil {
+		return nil, err
+	}
+
+	if user != nil && user.User != nil {
+
+	}
+
+	return feishuUser, nil
 }

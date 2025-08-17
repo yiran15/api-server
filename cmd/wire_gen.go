@@ -15,6 +15,7 @@ import (
 	"github.com/yiran15/api-server/controller"
 	"github.com/yiran15/api-server/pkg/casbin"
 	"github.com/yiran15/api-server/pkg/jwt"
+	"github.com/yiran15/api-server/pkg/oauth"
 	"github.com/yiran15/api-server/service/v1"
 	"github.com/yiran15/api-server/store"
 )
@@ -46,7 +47,9 @@ func InitApplication() (*app.Application, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	userServicer := v1.NewUserService(userStorer, roleStorer, cacheStore, txManager, generateToken)
+	feishuOauth := oauth.NewFeishuOauth()
+	feiShuUserStorer := store.NewFeiShuUserStore(dbProvider)
+	userServicer := v1.NewUserService(userStorer, roleStorer, cacheStore, txManager, generateToken, feishuOauth, feiShuUserStorer)
 	userController := controller.NewUserController(userServicer)
 	apiStorer := store.NewApiStore(dbProvider)
 	casbinStorer := store.NewCasbinStore(dbProvider)

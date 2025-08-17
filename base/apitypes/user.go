@@ -70,3 +70,8 @@ type UserUpdateRoleRequest struct {
 	ID      int64   `uri:"id" validate:"required"`
 	RolesID []int64 `json:"rolesID" validate:"required"`
 }
+
+type OAuthLoginRequest struct {
+	Code  string `form:"code" validate:"required"`
+	State string `form:"state" validate:"required"`
+}

@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	_ "github.com/joho/godotenv/autoload"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/yiran15/api-server/base/middleware"
@@ -35,6 +36,8 @@ func NewRouter(
 
 func (r *Router) RegisterRouter(engine *gin.Engine) {
 	engine.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsAllowAll), r.middleware.RequestID())
+
+	r.registerOAuthRouter(engine)
 	apiGroup := engine.Group("/api/v1")
 	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.registerUserRouter(apiGroup)
@@ -83,5 +86,13 @@ func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {
 		baseGroup.GET("/:id", r.apiRouter.QueryApi)
 		baseGroup.GET("", r.apiRouter.ListApi)
 
+	}
+}
+
+func (r *Router) registerOAuthRouter(engine *gin.Engine) {
+	oauthGroup := engine.Group("/oauth")
+	{
+		oauthGroup.GET("/login", r.userRouter.FeishuLogin)
+		oauthGroup.GET("/callback", r.userRouter.FeishuCallback)
 	}
 }

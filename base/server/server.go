@@ -67,7 +67,7 @@ func NewHttpServer(r router.RouterInterface) (*gin.Engine, error) {
 	var apiData apitypes.ServerApiData
 	apiData.ApiInfo = make(map[string][]apitypes.ApiInfo)
 	for _, v := range engine.Routes() {
-		if v.Path == "/swagger/*any" {
+		if v.Path == "/swagger/*any" || v.Path == "/oauth/login" || v.Path == "/oauth/callback" {
 			continue
 		}
 		api := strings.TrimPrefix(v.Path, "/")
