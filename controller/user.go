@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	v1 "github.com/yiran15/api-server/service/v1"
 )
@@ -15,6 +17,8 @@ type UserController interface {
 	UserQuery(c *gin.Context)
 	UserList(c *gin.Context)
 	UserInfo(c *gin.Context)
+	FeishuLogin(c *gin.Context)
+	FeishuCallback(c *gin.Context)
 }
 
 type UserControllerImpl struct {
@@ -140,4 +144,34 @@ func (u *UserControllerImpl) UserInfo(c *gin.Context) {
 // @Router /api/v1/user/ [get]
 func (u *UserControllerImpl) UserList(c *gin.Context) {
 	ResponseWithData(c, u.userServicer.ListUser, bindTypeQuery)
+}
+
+// FeishuLogin 飞书登录
+// @Summary 飞书登录
+// @Description 使用飞书登录，返回用户信息和 Token
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} apitypes.Response{data=apitypes.UserLoginResponse} "登录成功"
+// @Router /api/v1/user/feishu/login [get]
+func (u *UserControllerImpl) FeishuLogin(c *gin.Context) {
+	url, err := u.userServicer.FeiShuOAuthLogin(c)
+	if err != nil {
+		responseError(c, err)
+		return
+	}
+	c.Redirect(http.StatusSeeOther, url)
+}
+
+// FeishuCallback 飞书回调
+// @Summary 飞书回调
+// @Description 使用飞书回调，返回用户信息和 Token
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Param data query apitypes.OAuthLoginRequest true "回调请求参数"
+// @Success 200 {object} apitypes.Response{data=apitypes.UserLoginResponse} "登录成功"
+// @Router /api/v1/user/feishu/callback [get]
+func (u *UserControllerImpl) FeishuCallback(c *gin.Context) {
+	ResponseWithData(c, u.userServicer.FeiShuOAuthCallback, bindTypeQuery)
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/google/wire"
 	"github.com/yiran15/api-server/pkg/casbin"
 	"github.com/yiran15/api-server/pkg/jwt"
+	"github.com/yiran15/api-server/pkg/oauth"
 )
 
 var PkgProviderSet = wire.NewSet(
@@ -12,4 +13,5 @@ var PkgProviderSet = wire.NewSet(
 	casbin.NewCasbinManager,
 	casbin.NewAuthChecker,
 	jwt.NewGenerateToken,
+	oauth.NewFeishuOauth,
 )

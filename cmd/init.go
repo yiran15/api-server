@@ -82,7 +82,7 @@ func getService() (*service, func(), error) {
 	}
 	casbinManager := casbin.NewCasbinManager(casbinEnforcer)
 
-	userServicer := v1.NewUserService(userRepo, roleRepo, cacheStore, txManager, generateToken)
+	userServicer := v1.NewUserService(userRepo, roleRepo, cacheStore, txManager, generateToken, nil, nil)
 	roleServicer := v1.NewRoleService(roleRepo, apiRepo, casbinStore, casbinManager, txManager)
 	apiServicer := v1.NewApiServicer(apiRepo)
 	return &service{

@@ -64,3 +64,19 @@ type CasbinStorer interface {
 func NewCasbinStore(dbProvider DBProviderInterface) CasbinStorer {
 	return NewRepository[model.CasbinRule](dbProvider)
 }
+
+type FeiShuUserStorer interface {
+	Create(ctx context.Context, obj *model.FeiShuUser) error
+	CreateBatch(ctx context.Context, objs []*model.FeiShuUser) error
+	Update(ctx context.Context, obj *model.FeiShuUser, opts ...Option) error
+	Delete(ctx context.Context, obj *model.FeiShuUser, opts ...Option) error
+	Query(ctx context.Context, opts ...Option) (*model.FeiShuUser, error)
+	List(ctx context.Context, page, pageSize int, colum, oder string, opts ...Option) (total int64, objs []*model.FeiShuUser, err error)
+	AppendAssociation(ctx context.Context, model *model.FeiShuUser, objName string, obj any) error
+	ReplaceAssociation(ctx context.Context, model *model.FeiShuUser, objName string, obj any) error
+	ClearAssociation(ctx context.Context, model *model.FeiShuUser, objName string) error
+}
+
+func NewFeiShuUserStore(dbProvider DBProviderInterface) FeiShuUserStorer {
+	return NewRepository[model.FeiShuUser](dbProvider)
+}

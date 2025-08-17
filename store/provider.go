@@ -13,6 +13,7 @@ var StoreProviderSet = wire.NewSet(
 	NewRoleStore,
 	NewApiStore,
 	NewCasbinStore,
+	NewFeiShuUserStore,
 
 	wire.Bind(new(CacheStorer), new(*CacheStore)),
 	NewCacheStore,
