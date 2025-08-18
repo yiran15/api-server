@@ -4,25 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
+	"github.com/yiran15/api-server/base/conf"
+	"github.com/yiran15/api-server/base/helper"
 	"github.com/yiran15/api-server/model"
 	"golang.org/x/oauth2"
-)
-
-var (
-	oauthConfig = &oauth2.Config{
-		ClientID:     "cli_a76d4e0cab38100c",
-		ClientSecret: "Q04VFyNrQedJ3wrftlFIHfkDCWeisLWj",
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://accounts.feishu.cn/open-apis/authen/v1/authorize",
-			TokenURL: "https://open.feishu.cn/open-apis/authen/v2/oauth/token",
-		},
-		RedirectURL: "http://10.0.0.10:8080/oauth/callback",
-	}
-	state    = "random_state"
-	verifier = "code_verifier"
 )
 
 type FeishuOauth struct {
@@ -31,12 +20,18 @@ type FeishuOauth struct {
 	Verifier    string
 }
 
-func NewFeishuOauth() *FeishuOauth {
+func NewFeishuOauth() (*FeishuOauth, error) {
+	oauthConfig, err := conf.GetOauth2Config()
+	if err != nil {
+		return nil, err
+	}
+	state := conf.GetOauth2State()
+	verifier := conf.GetOauth2Verifier()
 	return &FeishuOauth{
 		OAuthConfig: oauthConfig,
 		State:       state,
 		Verifier:    verifier,
-	}
+	}, nil
 }
 
 func (f *FeishuOauth) GetAuthUrl() string {
@@ -69,9 +64,19 @@ func (f *FeishuOauth) GetUserInfo(ctx context.Context, token *oauth2.Token) (*mo
 	if err != nil {
 		return nil, err
 	}
-	var feishuUser model.FeiShuUser
-	if err := json.Unmarshal(body, &feishuUser); err != nil {
+	fmt.Println("body", string(body))
+
+	var res helper.HttpResponse
+	if err := json.Unmarshal(body, &res); err != nil {
 		return nil, err
 	}
-	return &feishuUser, nil
+	if res.Code != 0 {
+		return nil, errors.New(res.Msg)
+	}
+
+	feishuUser, err := helper.UnmarshalData[model.FeiShuUser](res.Data)
+	if err != nil {
+		return nil, err
+	}
+	return feishuUser, nil
 }

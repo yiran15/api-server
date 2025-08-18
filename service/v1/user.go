@@ -20,6 +20,16 @@ import (
 )
 
 type UserServicer interface {
+	GeneralUserServicer
+	FeishuServicer
+}
+
+type FeishuServicer interface {
+	FeiShuOAuthLogin(ctx context.Context) (string, error)
+	FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.FeiShuLoginResponse, error)
+}
+
+type GeneralUserServicer interface {
 	Login(ctx context.Context, req *apitypes.UserLoginRequest) (*apitypes.UserLoginResponse, error)
 	Logout(ctx context.Context) error
 	Info(ctx context.Context) (*model.User, error)
@@ -29,12 +39,6 @@ type UserServicer interface {
 	DeleteUser(ctx context.Context, req *apitypes.IDRequest) error
 	QueryUser(ctx context.Context, req *apitypes.IDRequest) (*model.User, error)
 	ListUser(ctx context.Context, pagination *apitypes.UserListRequest) (*apitypes.UserListResponse, error)
-	FeishuServicer
-}
-
-type FeishuServicer interface {
-	FeiShuOAuthLogin(ctx context.Context) (string, error)
-	FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*model.FeiShuUser, error)
 }
 
 type UserService struct {
@@ -376,27 +380,77 @@ func (s *UserService) checkPasswordHash(password, hash string) bool {
 }
 
 func (s *UserService) FeiShuOAuthLogin(ctx context.Context) (string, error) {
+	zap.L().Info("feishu oauth login", zap.String("url", s.feishuOauth.GetAuthUrl()))
 	return s.feishuOauth.GetAuthUrl(), nil
 }
 
-func (s *UserService) FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*model.FeiShuUser, error) {
-	token, err := s.feishuOauth.ExchangeToken(ctx, req.State, req.Code)
+func (s *UserService) FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.FeiShuLoginResponse, error) {
+	feishuToken, err := s.feishuOauth.ExchangeToken(ctx, req.State, req.Code)
 	if err != nil {
 		return nil, err
 	}
-	feishuUser, err := s.feishuOauth.GetUserInfo(ctx, token)
-	if err != nil {
-		return nil, err
-	}
-
-	user, err := s.feishuUserStore.Query(ctx, store.Where("user_id", feishuUser.UserID), store.Preload(model.PreloadUsers))
+	userInfo, err := s.feishuOauth.GetUserInfo(ctx, feishuToken)
 	if err != nil {
 		return nil, err
 	}
 
-	if user != nil && user.User != nil {
-
+	if userInfo.UserID == "" {
+		return nil, errors.New("feishu user is empty")
 	}
 
-	return feishuUser, nil
+	feishuUser, err := s.feishuUserStore.Query(ctx, store.Where("user_id", userInfo.UserID), store.Preload("User.Roles"))
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+
+		userInfo.User = &model.User{
+			Name:     userInfo.EnName,
+			NickName: userInfo.EnName,
+			Avatar:   userInfo.AvatarUrl,
+			Mobile:   userInfo.Mobile,
+			Status:   &model.UserStatusDisabled,
+		}
+		if userInfo.EnterpriseEmail != "" {
+			userInfo.User.Email = userInfo.EnterpriseEmail
+		} else if userInfo.Email != "" {
+			userInfo.User.Email = userInfo.Email
+		}
+
+		userInfo.Status = &model.FeiShuUserStatusInactive
+		if err := s.feishuUserStore.Create(ctx, userInfo); err != nil {
+			return nil, err
+		}
+		feishuUser = userInfo
+	}
+
+	if feishuUser.Status == &model.FeiShuUserStatusInactive || feishuUser.User == nil {
+		return &apitypes.FeiShuLoginResponse{
+			User: feishuUser,
+		}, nil
+	}
+
+	token, err := s.jwt.GenerateToken(feishuUser.User.ID, feishuUser.User.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(feishuUser.User.Roles) == 0 {
+		if err := s.cacheStore.SetSet(ctx, store.RoleType, feishuUser.User.ID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
+			log.WithRequestID(ctx).Error("login set empty role cache error", zap.Int64("userID", feishuUser.User.ID), zap.Error(err))
+		}
+	}
+
+	roleNames := make([]any, 0, len(feishuUser.User.Roles))
+	for _, role := range feishuUser.User.Roles {
+		roleNames = append(roleNames, role.Name)
+	}
+	if err := s.cacheStore.SetSet(ctx, store.RoleType, feishuUser.User.ID, roleNames, nil); err != nil {
+		log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", feishuUser.User.ID), zap.Any("roles", roleNames), zap.Error(err))
+	}
+
+	return &apitypes.FeiShuLoginResponse{
+		User:  feishuUser,
+		Token: token,
+	}, nil
 }
