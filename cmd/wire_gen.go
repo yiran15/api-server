@@ -47,7 +47,12 @@ func InitApplication() (*app.Application, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	feishuOauth := oauth.NewFeishuOauth()
+	feishuOauth, err := oauth.NewFeishuOauth()
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	feiShuUserStorer := store.NewFeiShuUserStore(dbProvider)
 	userServicer := v1.NewUserService(userStorer, roleStorer, cacheStore, txManager, generateToken, feishuOauth, feiShuUserStorer)
 	userController := controller.NewUserController(userServicer)

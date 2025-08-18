@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"golang.org/x/oauth2"
 )
 
 const (
@@ -248,4 +249,52 @@ func GetRedisKeyPrefix() (string, error) {
 		return "", fmt.Errorf("redis.keyPrefix is empty")
 	}
 	return prefix, nil
+}
+
+func GetOauth2Config() (*oauth2.Config, error) {
+	clientID := viper.GetString("oauth2.clientId")
+	if clientID == "" {
+		return nil, fmt.Errorf("oauth2.clientId is empty")
+	}
+	clientSecret := viper.GetString("oauth2.clientSecret")
+	if clientSecret == "" {
+		return nil, fmt.Errorf("oauth2.clientSecret is empty")
+	}
+	authUrl := viper.GetString("oauth2.authUrl")
+	if authUrl == "" {
+		return nil, fmt.Errorf("oauth2.authUrl is empty")
+	}
+	tokenUrl := viper.GetString("oauth2.tokenUrl")
+	if tokenUrl == "" {
+		return nil, fmt.Errorf("oauth2.tokenUrl is empty")
+	}
+	redirectUrl := viper.GetString("oauth2.redirectUrl")
+	if redirectUrl == "" {
+		return nil, fmt.Errorf("oauth2.redirectUrl is empty")
+	}
+	return &oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  authUrl,
+			TokenURL: tokenUrl,
+		},
+		RedirectURL: redirectUrl,
+	}, nil
+}
+
+func GetOauth2State() string {
+	state := viper.GetString("oauth2.state")
+	if state == "" {
+		return "random_state"
+	}
+	return state
+}
+
+func GetOauth2Verifier() string {
+	verifier := viper.GetString("oauth2.verifier")
+	if verifier == "" {
+		return "code_verifier"
+	}
+	return verifier
 }
