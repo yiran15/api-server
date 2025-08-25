@@ -4,14 +4,14 @@ CREATE TABLE `users` (
   `created_at` DATETIME NOT NULL,
   `updated_at` DATETIME NOT NULL,
   `deleted_at` DATETIME,
-  `name` VARCHAR(50) NOT NULL,
-  `nick_name` VARCHAR(50),
-  `department` VARCHAR(50),
-  `email` VARCHAR(100) NOT NULL,
-  `password` VARCHAR(255) NOT NULL,
-  `avatar` VARCHAR(255),
-  `mobile` VARCHAR(20),
-  `status` TINYINT(1) DEFAULT 1
+  `name` VARCHAR(50) NOT NULL comment '用户名称',
+  `nick_name` VARCHAR(50) comment '用户昵称',
+  `department` VARCHAR(50) comment '部门',
+  `email` VARCHAR(100) NOT NULL comment '用户邮箱',
+  `password` VARCHAR(255) NOT NULL comment '用户密码',
+  `avatar` VARCHAR(255) comment '用户头像',
+  `mobile` VARCHAR(20) comment '用户手机号',
+  `status` TINYINT(1) DEFAULT 1 comment '用户状态,1可用,2禁用,3未激活'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE INDEX `idx_users_deleted_at` ON `users` (`deleted_at`);
 
