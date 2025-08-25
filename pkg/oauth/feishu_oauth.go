@@ -15,9 +15,10 @@ import (
 )
 
 type FeishuOauth struct {
-	OAuthConfig *oauth2.Config
+	Name        string
+	UserInfoUrl string
 	State       string
-	Verifier    string
+	OAuthConfig *oauth2.Config
 }
 
 func NewFeishuOauth() (*FeishuOauth, error) {
@@ -26,16 +27,21 @@ func NewFeishuOauth() (*FeishuOauth, error) {
 		return nil, err
 	}
 	state := conf.GetOauth2State()
-	verifier := conf.GetOauth2Verifier()
+	userInfoUrl, err := conf.GetOauth2UserInfoUrl()
+	if err != nil {
+		return nil, err
+	}
+	name := conf.GetOauth2Name()
 	return &FeishuOauth{
+		Name:        name,
 		OAuthConfig: oauthConfig,
+		UserInfoUrl: userInfoUrl,
 		State:       state,
-		Verifier:    verifier,
 	}, nil
 }
 
 func (f *FeishuOauth) GetAuthUrl() string {
-	return f.OAuthConfig.AuthCodeURL(f.State, oauth2.S256ChallengeOption(f.Verifier))
+	return f.OAuthConfig.AuthCodeURL(f.State)
 }
 
 func (f *FeishuOauth) ExchangeToken(ctx context.Context, state, code string) (*oauth2.Token, error) {
@@ -45,12 +51,12 @@ func (f *FeishuOauth) ExchangeToken(ctx context.Context, state, code string) (*o
 	if code == "" {
 		return nil, errors.New("code is empty")
 	}
-	return f.OAuthConfig.Exchange(ctx, code, oauth2.VerifierOption(f.Verifier))
+	return f.OAuthConfig.Exchange(ctx, code)
 }
 
 func (f *FeishuOauth) GetUserInfo(ctx context.Context, token *oauth2.Token) (*model.FeiShuUser, error) {
 	client := f.OAuthConfig.Client(ctx, token)
-	req, err := http.NewRequest("GET", "https://open.feishu.cn/open-apis/authen/v1/user_info", nil)
+	req, err := http.NewRequest("GET", f.UserInfoUrl, nil)
 	if err != nil {
 		return nil, err
 	}
