@@ -272,6 +272,11 @@ func GetOauth2Config() (*oauth2.Config, error) {
 	if redirectUrl == "" {
 		return nil, fmt.Errorf("oauth2.redirectUrl is empty")
 	}
+	scopes := viper.GetStringSlice("oauth2.scopes")
+	if len(scopes) == 0 {
+		return nil, fmt.Errorf("oauth2.scopes is empty")
+	}
+
 	return &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -280,6 +285,7 @@ func GetOauth2Config() (*oauth2.Config, error) {
 			TokenURL: tokenUrl,
 		},
 		RedirectURL: redirectUrl,
+		Scopes:      scopes,
 	}, nil
 }
 
@@ -297,4 +303,19 @@ func GetOauth2Verifier() string {
 		return "code_verifier"
 	}
 	return verifier
+}
+
+func GetFeishuUserInfoUrl() (string, error) {
+	if url := viper.GetString("oauth2.userInfoUrl"); url != "" {
+		return url, nil
+	}
+	return "", fmt.Errorf("oauth2.userInfoUrl is empty")
+}
+
+func GetOauth2Name() string {
+	name := viper.GetString("oauth2.name")
+	if name == "" {
+		return "oauth2"
+	}
+	return name
 }

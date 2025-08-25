@@ -6,10 +6,10 @@ import (
 	"gorm.io/gorm"
 )
 
-var (
-	FeiShuUserStatusActive   = 1
-	FeiShuUserStatusDisabled = 2
-	FeiShuUserStatusInactive = 3
+const (
+	FeiShuUserStatusActive = iota
+	FeiShuUserStatusDisabled
+	FeiShuUserStatusInactive
 )
 
 type FeiShuUser struct {

@@ -11,9 +11,10 @@ const (
 	PreloadUsers  = "Users"
 )
 
-var (
-	UserStatusActive   = 1
-	UserStatusDisabled = 2
+const (
+	UserStatusActive = iota
+	UserStatusDisabled
+	UserStatusInactive
 )
 
 type User struct {

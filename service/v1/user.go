@@ -409,7 +409,7 @@ func (s *UserService) FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAu
 			NickName: userInfo.EnName,
 			Avatar:   userInfo.AvatarUrl,
 			Mobile:   userInfo.Mobile,
-			Status:   &model.UserStatusDisabled,
+			Status:   helper.Int(model.UserStatusInactive),
 		}
 		if userInfo.EnterpriseEmail != "" {
 			userInfo.User.Email = userInfo.EnterpriseEmail
@@ -417,14 +417,14 @@ func (s *UserService) FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAu
 			userInfo.User.Email = userInfo.Email
 		}
 
-		userInfo.Status = &model.FeiShuUserStatusInactive
+		userInfo.Status = helper.Int(model.UserStatusInactive)
 		if err := s.feishuUserStore.Create(ctx, userInfo); err != nil {
 			return nil, err
 		}
 		feishuUser = userInfo
 	}
 
-	if feishuUser.Status == &model.FeiShuUserStatusInactive || feishuUser.User == nil {
+	if feishuUser.Status == helper.Int(model.UserStatusInactive) || feishuUser.User == nil {
 		return &apitypes.FeiShuLoginResponse{
 			User: feishuUser,
 		}, nil
