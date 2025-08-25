@@ -380,7 +380,6 @@ func (s *UserService) checkPasswordHash(password, hash string) bool {
 }
 
 func (s *UserService) FeiShuOAuthLogin(ctx context.Context) (string, error) {
-	zap.L().Info("feishu oauth login", zap.String("url", s.feishuOauth.GetAuthUrl()))
 	return s.feishuOauth.GetAuthUrl(), nil
 }
 
@@ -389,6 +388,9 @@ func (s *UserService) FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAu
 	if err != nil {
 		return nil, err
 	}
+
+	zap.L().Info("get token", zap.Any("token", feishuToken))
+	return nil, nil
 	userInfo, err := s.feishuOauth.GetUserInfo(ctx, feishuToken)
 	if err != nil {
 		return nil, err
