@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/yiran15/api-server/base/apitypes"
@@ -21,12 +22,12 @@ import (
 
 type UserServicer interface {
 	GeneralUserServicer
-	FeishuServicer
+	OAuthServicer
 }
 
-type FeishuServicer interface {
-	FeiShuOAuthLogin(ctx context.Context) (string, error)
-	FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.FeiShuLoginResponse, error)
+type OAuthServicer interface {
+	OAuthLogin(ctx context.Context) (string, error)
+	OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.OauthLoginResponse, error)
 }
 
 type GeneralUserServicer interface {
@@ -47,18 +48,18 @@ type UserService struct {
 	cacheStore      store.CacheStorer
 	tx              store.TxManagerInterface
 	jwt             jwt.JwtInterface
-	feishuOauth     *oauth.FeishuOauth
+	oauth           *oauth.Oauth
 	feishuUserStore store.FeiShuUserStorer
 }
 
-func NewUserService(userStore store.UserStorer, roleStore store.RoleStorer, cacheStore store.CacheStorer, tx store.TxManagerInterface, jwt jwt.JwtInterface, feishuOauth *oauth.FeishuOauth, feishuUserStore store.FeiShuUserStorer) UserServicer {
+func NewUserService(userStore store.UserStorer, roleStore store.RoleStorer, cacheStore store.CacheStorer, tx store.TxManagerInterface, jwt jwt.JwtInterface, feishuOauth *oauth.Oauth, feishuUserStore store.FeiShuUserStorer) UserServicer {
 	return &UserService{
 		userStore:       userStore,
 		roleStore:       roleStore,
 		cacheStore:      cacheStore,
 		tx:              tx,
 		jwt:             jwt,
-		feishuOauth:     feishuOauth,
+		oauth:           feishuOauth,
 		feishuUserStore: feishuUserStore,
 	}
 }
@@ -379,25 +380,98 @@ func (s *UserService) checkPasswordHash(password, hash string) bool {
 	return err == nil // 如果没有错误，则匹配成功
 }
 
-func (s *UserService) FeiShuOAuthLogin(ctx context.Context) (string, error) {
-	return s.feishuOauth.GetAuthUrl(), nil
+func (s *UserService) OAuthLogin(ctx context.Context) (string, error) {
+	return s.oauth.GetAuthUrl(), nil
 }
 
-func (s *UserService) FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.FeiShuLoginResponse, error) {
-	feishuToken, err := s.feishuOauth.ExchangeToken(ctx, req.State, req.Code)
+func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.OauthLoginResponse, error) {
+	var (
+		userID   int64
+		userName string
+		roles    []*model.Role
+		user     any
+	)
+	oauthToken, err := s.oauth.ExchangeToken(ctx, req.State, req.Code)
 	if err != nil {
 		return nil, err
 	}
 
-	zap.L().Info("get token", zap.Any("token", feishuToken))
-	return nil, nil
-	userInfo, err := s.feishuOauth.GetUserInfo(ctx, feishuToken)
+	userInfo, err := s.oauth.GetUserInfo(ctx, oauthToken)
 	if err != nil {
 		return nil, err
 	}
 
+	switch v := userInfo.(type) {
+	case *model.FeiShuUser:
+		feishuUser, err := s.feishuLogin(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+
+		userID = feishuUser.User.ID
+		userName = feishuUser.User.Name
+		roles = feishuUser.User.Roles
+		user = feishuUser
+		if feishuUser.User == nil || *feishuUser.User.Status == model.UserStatusInactive {
+			return &apitypes.OauthLoginResponse{
+				User: feishuUser,
+			}, nil
+		}
+	case *model.KeycloakUser:
+		u, err := s.genericLogin(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		userID = u.ID
+		userName = u.Name
+		roles = u.Roles
+		user = u
+		if *u.Status == model.UserStatusInactive {
+			return &apitypes.OauthLoginResponse{
+				User: u,
+			}, nil
+		}
+	}
+
+	token, err := s.jwt.GenerateToken(userID, userName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(roles) == 0 {
+		if err := s.cacheStore.SetSet(ctx, store.RoleType, userID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
+			log.WithRequestID(ctx).Error("login set empty role cache error", zap.Int64("userID", userID), zap.Error(err))
+		}
+
+		return &apitypes.OauthLoginResponse{
+			User:  user,
+			Token: token,
+		}, nil
+	}
+
+	roleNames := make([]any, 0, len(roles))
+	for _, role := range roles {
+		roleNames = append(roleNames, role.Name)
+	}
+	if err := s.cacheStore.SetSet(ctx, store.RoleType, userID, roleNames, nil); err != nil {
+		log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", userID), zap.Any("roles", roleNames), zap.Error(err))
+	}
+
+	return &apitypes.OauthLoginResponse{
+		User:  user,
+		Token: token,
+	}, nil
+}
+
+func (s *UserService) feishuLogin(ctx context.Context, userInfo *model.FeiShuUser) (data *model.FeiShuUser, err error) {
 	if userInfo.UserID == "" {
 		return nil, errors.New("feishu user is empty")
+	}
+	var email string
+	if userInfo.EnterpriseEmail != "" {
+		email = userInfo.EnterpriseEmail
+	} else if userInfo.Email != "" {
+		email = userInfo.Email
 	}
 
 	feishuUser, err := s.feishuUserStore.Query(ctx, store.Where("user_id", userInfo.UserID), store.Preload("User.Roles"))
@@ -412,11 +486,7 @@ func (s *UserService) FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAu
 			Avatar:   userInfo.AvatarUrl,
 			Mobile:   userInfo.Mobile,
 			Status:   helper.Int(model.UserStatusInactive),
-		}
-		if userInfo.EnterpriseEmail != "" {
-			userInfo.User.Email = userInfo.EnterpriseEmail
-		} else if userInfo.Email != "" {
-			userInfo.User.Email = userInfo.Email
+			Email:    email,
 		}
 
 		userInfo.Status = helper.Int(model.UserStatusInactive)
@@ -426,33 +496,38 @@ func (s *UserService) FeiShuOAuthCallback(ctx context.Context, req *apitypes.OAu
 		feishuUser = userInfo
 	}
 
-	if feishuUser.Status == helper.Int(model.UserStatusInactive) || feishuUser.User == nil {
-		return &apitypes.FeiShuLoginResponse{
-			User: feishuUser,
-		}, nil
+	return feishuUser, nil
+}
+
+func (s *UserService) genericLogin(ctx context.Context, userInfo *model.KeycloakUser) (data *model.User, err error) {
+	if userInfo.Sub == "" {
+		return nil, errors.New("generic user is empty")
 	}
 
-	token, err := s.jwt.GenerateToken(feishuUser.User.ID, feishuUser.User.Name)
+	data, err = s.userStore.Query(ctx, store.Where("email", userInfo.Email), store.Preload("Roles"))
 	if err != nil {
-		return nil, err
-	}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
 
-	if len(feishuUser.User.Roles) == 0 {
-		if err := s.cacheStore.SetSet(ctx, store.RoleType, feishuUser.User.ID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
-			log.WithRequestID(ctx).Error("login set empty role cache error", zap.Int64("userID", feishuUser.User.ID), zap.Error(err))
+		data = &model.User{
+			Name:       userInfo.PreferredUsername,
+			NickName:   userInfo.FamilyName + userInfo.GivenName,
+			Email:      userInfo.Email,
+			Status:     helper.Int(model.UserStatusInactive),
+			Department: strings.Join(userInfo.Group, ","),
+		}
+		if len(userInfo.Roles) > 0 {
+			_, roles, err := s.roleStore.List(ctx, 0, 0, "", "", store.In("name", userInfo.Roles))
+			if err != nil {
+				return nil, err
+			}
+			data.Roles = roles
+		}
+		if err := s.userStore.Create(ctx, data); err != nil {
+			return nil, err
 		}
 	}
 
-	roleNames := make([]any, 0, len(feishuUser.User.Roles))
-	for _, role := range feishuUser.User.Roles {
-		roleNames = append(roleNames, role.Name)
-	}
-	if err := s.cacheStore.SetSet(ctx, store.RoleType, feishuUser.User.ID, roleNames, nil); err != nil {
-		log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", feishuUser.User.ID), zap.Any("roles", roleNames), zap.Error(err))
-	}
-
-	return &apitypes.FeiShuLoginResponse{
-		User:  feishuUser,
-		Token: token,
-	}, nil
+	return data, nil
 }

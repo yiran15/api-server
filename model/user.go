@@ -12,7 +12,7 @@ const (
 )
 
 const (
-	UserStatusActive = iota
+	UserStatusActive = iota + 1
 	UserStatusDisabled
 	UserStatusInactive
 )
@@ -29,7 +29,7 @@ type User struct {
 	Password   string         `gorm:"column:password;comment:用户密码;size:255" json:"-"`
 	Avatar     string         `gorm:"column:avatar;comment:用户头像;size:1024" json:"avatar"`
 	Mobile     string         `gorm:"column:mobile;comment:用户手机号;size:20" json:"mobile"`
-	Status     *int           `gorm:"column:status;comment:用户状态,1可用,2禁用;size:1;default:1" json:"status"`
+	Status     *int           `gorm:"column:status;comment:用户状态,1可用,2禁用,3未激活;size:1;default:1" json:"status"`
 	Roles      []*Role        `gorm:"many2many:user_roles" json:"roles,omitempty"`
 }
 

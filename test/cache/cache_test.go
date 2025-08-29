@@ -13,14 +13,14 @@ import (
 )
 
 var (
-	cacheStore store.CacheStorer
-	closeup    func()
+	cacheStore  store.CacheStorer
+	redisClient *redis.Client
+	closeup     func()
 )
 
 func init() {
 	var (
-		redisClient *redis.Client
-		err         error
+		err error
 	)
 	conf.LoadConfig("../../config.yaml")
 	redisClient, err = data.NewRDB()

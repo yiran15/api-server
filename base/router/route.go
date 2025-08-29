@@ -92,7 +92,7 @@ func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {
 func (r *Router) registerOAuthRouter(engine *gin.Engine) {
 	oauthGroup := engine.Group("/oauth")
 	{
-		oauthGroup.GET("/login", r.userRouter.FeishuLogin)
-		oauthGroup.GET("/callback", r.userRouter.FeishuCallback)
+		oauthGroup.GET("/login", r.userRouter.OAuthLogin)
+		oauthGroup.GET("/callback", r.userRouter.OAuthCallback)
 	}
 }

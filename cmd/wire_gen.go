@@ -16,7 +16,7 @@ import (
 	"github.com/yiran15/api-server/pkg/casbin"
 	"github.com/yiran15/api-server/pkg/jwt"
 	"github.com/yiran15/api-server/pkg/oauth"
-	"github.com/yiran15/api-server/service/v1"
+	v1 "github.com/yiran15/api-server/service/v1"
 	"github.com/yiran15/api-server/store"
 )
 
@@ -47,7 +47,7 @@ func InitApplication() (*app.Application, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	feishuOauth, err := oauth.NewFeishuOauth()
+	feishuOauth, err := oauth.NewOauth()
 	if err != nil {
 		cleanup2()
 		cleanup()

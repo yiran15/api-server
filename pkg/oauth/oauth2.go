@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -14,14 +13,14 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type FeishuOauth struct {
+type Oauth struct {
 	Name        string
 	UserInfoUrl string
 	State       string
 	OAuthConfig *oauth2.Config
 }
 
-func NewFeishuOauth() (*FeishuOauth, error) {
+func NewOauth() (*Oauth, error) {
 	oauthConfig, err := conf.GetOauth2Config()
 	if err != nil {
 		return nil, err
@@ -32,7 +31,7 @@ func NewFeishuOauth() (*FeishuOauth, error) {
 		return nil, err
 	}
 	name := conf.GetOauth2Name()
-	return &FeishuOauth{
+	return &Oauth{
 		Name:        name,
 		OAuthConfig: oauthConfig,
 		UserInfoUrl: userInfoUrl,
@@ -40,11 +39,11 @@ func NewFeishuOauth() (*FeishuOauth, error) {
 	}, nil
 }
 
-func (f *FeishuOauth) GetAuthUrl() string {
+func (f *Oauth) GetAuthUrl() string {
 	return f.OAuthConfig.AuthCodeURL(f.State)
 }
 
-func (f *FeishuOauth) ExchangeToken(ctx context.Context, state, code string) (*oauth2.Token, error) {
+func (f *Oauth) ExchangeToken(ctx context.Context, state, code string) (*oauth2.Token, error) {
 	if state != f.State {
 		return nil, errors.New("state is not match")
 	}
@@ -54,7 +53,7 @@ func (f *FeishuOauth) ExchangeToken(ctx context.Context, state, code string) (*o
 	return f.OAuthConfig.Exchange(ctx, code)
 }
 
-func (f *FeishuOauth) GetUserInfo(ctx context.Context, token *oauth2.Token) (*model.FeiShuUser, error) {
+func (f *Oauth) GetUserInfo(ctx context.Context, token *oauth2.Token) (any, error) {
 	client := f.OAuthConfig.Client(ctx, token)
 	req, err := http.NewRequest("GET", f.UserInfoUrl, nil)
 	if err != nil {
@@ -70,7 +69,10 @@ func (f *FeishuOauth) GetUserInfo(ctx context.Context, token *oauth2.Token) (*mo
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("body", string(body))
+	var kcUser model.KeycloakUser
+	if err := json.Unmarshal(body, &kcUser); err == nil && kcUser.Sub != "" {
+		return &kcUser, nil
+	}
 
 	var res helper.HttpResponse
 	if err := json.Unmarshal(body, &res); err != nil {

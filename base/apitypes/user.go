@@ -75,3 +75,8 @@ type OAuthLoginRequest struct {
 	Code  string `form:"code" validate:"required"`
 	State string `form:"state" validate:"required"`
 }
+
+type OauthLoginResponse struct {
+	User  any    `json:"user"`
+	Token string `json:"token"`
+}

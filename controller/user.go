@@ -17,8 +17,8 @@ type UserController interface {
 	UserQuery(c *gin.Context)
 	UserList(c *gin.Context)
 	UserInfo(c *gin.Context)
-	FeishuLogin(c *gin.Context)
-	FeishuCallback(c *gin.Context)
+	OAuthLogin(c *gin.Context)
+	OAuthCallback(c *gin.Context)
 }
 
 type UserControllerImpl struct {
@@ -146,7 +146,7 @@ func (u *UserControllerImpl) UserList(c *gin.Context) {
 	ResponseWithData(c, u.userServicer.ListUser, bindTypeQuery)
 }
 
-// FeishuLogin 飞书登录
+// OAuthLogin 飞书登录
 // @Summary 飞书登录
 // @Description 使用飞书登录，返回用户信息和 Token
 // @Tags 用户管理
@@ -154,8 +154,8 @@ func (u *UserControllerImpl) UserList(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} apitypes.Response{data=apitypes.UserLoginResponse} "登录成功"
 // @Router /api/v1/user/feishu/login [get]
-func (u *UserControllerImpl) FeishuLogin(c *gin.Context) {
-	url, err := u.userServicer.FeiShuOAuthLogin(c)
+func (u *UserControllerImpl) OAuthLogin(c *gin.Context) {
+	url, err := u.userServicer.OAuthLogin(c)
 	if err != nil {
 		responseError(c, err)
 		return
@@ -163,7 +163,7 @@ func (u *UserControllerImpl) FeishuLogin(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, url)
 }
 
-// FeishuCallback 飞书回调
+// OAuthCallback 飞书回调
 // @Summary 飞书回调
 // @Description 使用飞书回调，返回用户信息和 Token
 // @Tags 用户管理
@@ -172,6 +172,6 @@ func (u *UserControllerImpl) FeishuLogin(c *gin.Context) {
 // @Param data query apitypes.OAuthLoginRequest true "回调请求参数"
 // @Success 200 {object} apitypes.Response{data=apitypes.UserLoginResponse} "登录成功"
 // @Router /api/v1/user/feishu/callback [get]
-func (u *UserControllerImpl) FeishuCallback(c *gin.Context) {
-	ResponseWithData(c, u.userServicer.FeiShuOAuthCallback, bindTypeQuery)
+func (u *UserControllerImpl) OAuthCallback(c *gin.Context) {
+	ResponseWithData(c, u.userServicer.OAuthCallback, bindTypeQuery)
 }
