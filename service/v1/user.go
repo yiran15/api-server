@@ -48,11 +48,11 @@ type UserService struct {
 	cacheStore      store.CacheStorer
 	tx              store.TxManagerInterface
 	jwt             jwt.JwtInterface
-	oauth           *oauth.Oauth
+	oauth           *oauth.OAuth2
 	feishuUserStore store.FeiShuUserStorer
 }
 
-func NewUserService(userStore store.UserStorer, roleStore store.RoleStorer, cacheStore store.CacheStorer, tx store.TxManagerInterface, jwt jwt.JwtInterface, feishuOauth *oauth.Oauth, feishuUserStore store.FeiShuUserStorer) UserServicer {
+func NewUserService(userStore store.UserStorer, roleStore store.RoleStorer, cacheStore store.CacheStorer, tx store.TxManagerInterface, jwt jwt.JwtInterface, feishuOauth *oauth.OAuth2, feishuUserStore store.FeiShuUserStorer) UserServicer {
 	return &UserService{
 		userStore:       userStore,
 		roleStore:       roleStore,
@@ -385,7 +385,7 @@ func (s *UserService) OAuthLogin(ctx context.Context) (string, error) {
 	if !ok {
 		return "", errors.New("state not found")
 	}
-	return s.oauth.GetAuthUrl(state), nil
+	return s.oauth.Redirect(state), nil
 }
 
 func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error) {
@@ -395,12 +395,12 @@ func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLogi
 		roles    []*model.Role
 		user     *model.User
 	)
-	oauthToken, err := s.oauth.ExchangeToken(ctx, req.State, req.Code)
+	oauthToken, err := s.oauth.Auth(ctx, req.State, req.Code)
 	if err != nil {
 		return nil, err
 	}
 
-	userInfo, err := s.oauth.GetUserInfo(ctx, oauthToken)
+	userInfo, err := s.oauth.UserInfo(ctx, oauthToken)
 	if err != nil {
 		return nil, err
 	}

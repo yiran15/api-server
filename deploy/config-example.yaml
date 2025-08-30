@@ -1,30 +1,59 @@
 server:
   bind: 0.0.0.0:8080
-  logLevel: debug
+
+log:
+  # 日志级别 debug info
+  level: debug
 
 mysql:
-  username: root
-  password: ""
-  host: 127.0.0.1
+  debug: true
+  username: xxx
+  password: xxx
+  host: xxx
   port: 3306
-  database: ""
+  database: xxx
   maxIdleConns: 10
   maxOpenConns: 20
   maxLifetime: 30m
-  debug: true
 
 # redis配置
 redis:
   # single sentinel
   mode: single
   host: 127.0.0.1:6379
-  password: ""
+  password: xxx
   # 过期时间 3s 3m 3h
   expireTime: 300s
-  keyPrefix: tutu
+  keyPrefix: xxx
   db: 0
+  poolSize: 20
+  minIdleConns: 10
+  connMaxLifetime: 30m
 
 jwt:
-  issuer: tutu
-  secret: ""
+  issuer: api-server
+  secret: qwer123
   expireTime: 9999h
+
+oauth2:
+  enable: true
+  name: feishu
+  clientId: xxx
+  clientSecret: xxx
+  authUrl: https://accounts.feishu.cn/open-apis/authen/v1/authorize
+  tokenUrl: https://open.feishu.cn/open-apis/authen/v2/oauth/token
+  userInfoUrl: https://open.feishu.cn/open-apis/authen/v1/user_info
+  redirectUrl: http://10.0.0.10:8080/oauth/callback
+
+  # name: keycolak
+  # clientId: xxx
+  # clientSecret: xxx
+  # scopes:
+  # - openid
+  # - email
+  # - profile
+  # - roles
+  # authUrl: https://keycloak.qqlx.net/realms/qqlx/protocol/openid-connect/auth
+  # tokenUrl: https://keycloak.qqlx.net/realms/qqlx/protocol/openid-connect/token
+  # userInfoUrl: https://keycloak.qqlx.net/realms/qqlx/protocol/openid-connect/userinfo
+  # redirectUrl: http://10.0.0.10:8080/oauth/callback

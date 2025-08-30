@@ -55,7 +55,7 @@ func (s *Server) Stop() error {
 }
 
 func NewHttpServer(r router.RouterInterface) (*gin.Engine, error) {
-	if conf.GetServerLogLevel() == "debug" {
+	if conf.GetLogLevel() == "debug" {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)

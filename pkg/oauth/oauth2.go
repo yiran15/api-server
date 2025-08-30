@@ -14,37 +14,37 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type Oauth struct {
+type OAuth2 struct {
 	Name        string
 	UserInfoUrl string
-	State       string
 	OAuthConfig *oauth2.Config
 }
 
-func NewOauth() (*Oauth, error) {
+func NewOAuth2() (*OAuth2, error) {
+	if !conf.GetOauthEnable() {
+		return nil, nil
+	}
 	oauthConfig, err := conf.GetOauth2Config()
 	if err != nil {
 		return nil, err
 	}
-	state := conf.GetOauth2State()
 	userInfoUrl, err := conf.GetOauth2UserInfoUrl()
 	if err != nil {
 		return nil, err
 	}
 	name := conf.GetOauth2Name()
-	return &Oauth{
+	return &OAuth2{
 		Name:        name,
 		OAuthConfig: oauthConfig,
 		UserInfoUrl: userInfoUrl,
-		State:       state,
 	}, nil
 }
 
-func (f *Oauth) GetAuthUrl(state string) string {
+func (f *OAuth2) Redirect(state string) string {
 	return f.OAuthConfig.AuthCodeURL(state)
 }
 
-func (f *Oauth) ExchangeToken(ctx context.Context, state, code string) (*oauth2.Token, error) {
+func (f *OAuth2) Auth(ctx context.Context, state, code string) (*oauth2.Token, error) {
 	ctxState, ok := ctx.Value(constant.StateContextKey).(string)
 	if !ok {
 		return nil, errors.New("state not found")
@@ -58,7 +58,7 @@ func (f *Oauth) ExchangeToken(ctx context.Context, state, code string) (*oauth2.
 	return f.OAuthConfig.Exchange(ctx, code)
 }
 
-func (f *Oauth) GetUserInfo(ctx context.Context, token *oauth2.Token) (any, error) {
+func (f *OAuth2) UserInfo(ctx context.Context, token *oauth2.Token) (any, error) {
 	client := f.OAuthConfig.Client(ctx, token)
 	req, err := http.NewRequest("GET", f.UserInfoUrl, nil)
 	if err != nil {

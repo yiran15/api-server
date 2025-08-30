@@ -1,5 +1,5 @@
 {
-  // 使用 IntelliSense 了解相关属性。 
+  // 使用 IntelliSense 了解相关属性。
   // 悬停以查看现有属性的描述。
   // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
@@ -10,9 +10,11 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/apiserver/main.go",
-      // "args": ["-C", "${workspaceFolder}/config.yaml"],
+      "args": ["-c", "${workspaceFolder}/config.yaml"],
       "env": {
-        "QQLX_CONFIG_PATH": "${workspaceFolder}/config.yaml"
+        "SERVICE_NAME": "api-server",
+        "API_SERVER_SERVER_BIND": ":8090"
+        // "API_SERVER_CONFIG_PATH": "${workspaceFolder}/config.yaml"
       }
     },
     {
@@ -23,6 +25,7 @@
       "program": "${workspaceFolder}/cmd/apiserver/main.go",
       "args": ["init"],
       "env": {
+        "SERVICE_NAME": "qqlx",
         "QQLX_CONFIG_PATH": "${workspaceFolder}/config.yaml"
       }
     }

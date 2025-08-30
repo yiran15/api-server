@@ -47,7 +47,7 @@ func InitApplication() (*app.Application, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	feishuOauth, err := oauth.NewOauth()
+	feishuOauth, err := oauth.NewOAuth2()
 	if err != nil {
 		cleanup2()
 		cleanup()

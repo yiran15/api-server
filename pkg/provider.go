@@ -13,5 +13,5 @@ var PkgProviderSet = wire.NewSet(
 	casbin.NewCasbinManager,
 	casbin.NewAuthChecker,
 	jwt.NewGenerateToken,
-	oauth.NewOauth,
+	oauth.NewOAuth2,
 )

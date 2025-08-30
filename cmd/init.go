@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/yiran15/api-server/base/apitypes"
 	"github.com/yiran15/api-server/base/conf"
+	"github.com/yiran15/api-server/base/constant"
 	"github.com/yiran15/api-server/base/data"
 	"github.com/yiran15/api-server/model"
 	"github.com/yiran15/api-server/pkg/casbin"
@@ -25,7 +26,7 @@ func NewInitCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cf := viper.GetString(FlagConfigPath)
+			cf := viper.GetString(constant.FlagConfigPath)
 			if cf == "" {
 				zap.L().Fatal("config file path is empty")
 			}

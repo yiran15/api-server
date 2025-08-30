@@ -12,12 +12,11 @@ import (
 )
 
 const (
-	defaultLoglevel               = "info"
-	defaultServerBind             = "0.0.0.0:8080"
-	defaultJwtIssuer              = "api-server"
-	defaultJwtExpireTime          = "1h"
-	defaultLoadCasbinTimeDuration = 5 * time.Second
-	defaultRedisExpireTime        = "30s"
+	defaultLoglevel        = "info"
+	defaultServerBind      = "0.0.0.0:8080"
+	defaultJwtIssuer       = "api-server"
+	defaultJwtExpireTime   = "1h"
+	defaultRedisExpireTime = "1h"
 )
 
 func LoadConfig(configPath string) (err error) {
@@ -41,13 +40,8 @@ func LoadConfig(configPath string) (err error) {
 	return nil
 }
 
-func GetServerCompress() bool {
-	compress := viper.GetBool("server.compress")
-	return compress
-}
-
-func GetServerLogLevel() string {
-	logLevel := viper.GetString("server.logLevel")
+func GetLogLevel() string {
+	logLevel := viper.GetString("log.level")
 	if logLevel == "" {
 		logLevel = defaultLoglevel
 	}
@@ -62,22 +56,7 @@ func GetServerBind() string {
 	return bind
 }
 
-func GetServerSalt() (string, error) {
-	salt := viper.GetString("server.salt")
-	if salt == "" {
-		return "", fmt.Errorf("server.salt is empty")
-	}
-	return salt, nil
-}
-
-func GetServerAutoLoadCasbinRule() time.Duration {
-	duration := viper.GetDuration("server.autoLoadCasbinRule")
-	if duration == 0 {
-		return defaultLoadCasbinTimeDuration
-	}
-	return duration
-}
-
+// jwt config
 func GetJwtSecret() (string, error) {
 	secret := viper.GetString("jwt.secret")
 	if secret == "" {
@@ -107,6 +86,7 @@ func GetJwtExpirationTime() (time.Duration, error) {
 	return expireTime, nil
 }
 
+// mysql config
 func GetMysqlDsn() (dsn string, err error) {
 	user := viper.GetString("mysql.username")
 	if user == "" {
@@ -157,6 +137,7 @@ func GetMysqlMaxLifetime() time.Duration {
 	return maxLifetime
 }
 
+// redis config
 func GetRedisPoolSize() int {
 	poolSize := viper.GetInt("redis.poolSize")
 	if poolSize == 0 {
@@ -251,6 +232,7 @@ func GetRedisKeyPrefix() (string, error) {
 	return prefix, nil
 }
 
+// 获取oauth2配置
 func GetOauth2Config() (*oauth2.Config, error) {
 	clientID := viper.GetString("oauth2.clientId")
 	if clientID == "" {
@@ -285,14 +267,6 @@ func GetOauth2Config() (*oauth2.Config, error) {
 	}, nil
 }
 
-func GetOauth2State() string {
-	state := viper.GetString("oauth2.state")
-	if state == "" {
-		return "random_state"
-	}
-	return state
-}
-
 func GetOauth2UserInfoUrl() (string, error) {
 	if url := viper.GetString("oauth2.userInfoUrl"); url != "" {
 		return url, nil
@@ -306,4 +280,8 @@ func GetOauth2Name() string {
 		return "oauth2"
 	}
 	return name
+}
+
+func GetOauthEnable() bool {
+	return viper.GetBool("oauth2.enable")
 }

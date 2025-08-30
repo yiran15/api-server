@@ -17,7 +17,7 @@ func NewLogger() {
 		writer   zapcore.WriteSyncer
 		logLevel zapcore.Level
 	)
-	logLevelStr := conf.GetServerLogLevel()
+	logLevelStr := conf.GetLogLevel()
 	config := zapcore.EncoderConfig{
 		TimeKey:       "time",
 		LevelKey:      "level",
@@ -44,9 +44,7 @@ func NewLogger() {
 	core := zapcore.NewCore(encoder, writer, logLevel)
 	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.FatalLevel))
 	zap.ReplaceGlobals(logger)
-	if logLevel == zap.DebugLevel {
-		zap.L().Debug("log initialization successful", zap.String("level", logLevelStr))
-	}
+	zap.L().Info("log initialization successful", zap.String("level", logLevelStr))
 }
 
 func WithRequestID(ctx context.Context) *zap.Logger {
