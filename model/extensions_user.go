@@ -6,12 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	FeiShuUserStatusActive = iota
-	FeiShuUserStatusDisabled
-	FeiShuUserStatusInactive
-)
-
 type FeiShuUser struct {
 	UID             int64          `gorm:"column:uid;primarykey;comment:关联users表中的用户id" json:"uid"`
 	User            *User          `gorm:"foreignKey:UID;references:ID" json:"user"`
@@ -32,7 +26,6 @@ type FeiShuUser struct {
 	TenantKey       string         `gorm:"column:tenant_key;comment:飞书用户tenant_key" json:"tenant_key"`
 	UnionID         string         `gorm:"column:union_id;comment:飞书用户union_id" json:"union_id"`
 	UserID          string         `gorm:"column:user_id;comment:飞书用户ID;index:idx_user_id_status,priority:1" json:"user_id"`
-	Status          *int           `gorm:"column:status;comment:用户状态,1可用,2禁用,3未激活;size:1;default:1;index:idx_user_id_status,priority:2;" json:"status"`
 }
 
 func (receiver *FeiShuUser) TableName() string {

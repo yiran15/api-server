@@ -27,7 +27,7 @@ type UserServicer interface {
 
 type OAuthServicer interface {
 	OAuthLogin(ctx context.Context) (string, error)
-	OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.OauthLoginResponse, error)
+	OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error)
 }
 
 type GeneralUserServicer interface {
@@ -381,15 +381,19 @@ func (s *UserService) checkPasswordHash(password, hash string) bool {
 }
 
 func (s *UserService) OAuthLogin(ctx context.Context) (string, error) {
-	return s.oauth.GetAuthUrl(), nil
+	state, ok := ctx.Value(constant.StateContextKey).(string)
+	if !ok {
+		return "", errors.New("state not found")
+	}
+	return s.oauth.GetAuthUrl(state), nil
 }
 
-func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.OauthLoginResponse, error) {
+func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error) {
 	var (
 		userID   int64
 		userName string
 		roles    []*model.Role
-		user     any
+		user     *model.User
 	)
 	oauthToken, err := s.oauth.ExchangeToken(ctx, req.State, req.Code)
 	if err != nil {
@@ -411,12 +415,14 @@ func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLogi
 		userID = feishuUser.User.ID
 		userName = feishuUser.User.Name
 		roles = feishuUser.User.Roles
-		user = feishuUser
+		user = feishuUser.User
 		if feishuUser.User == nil || *feishuUser.User.Status == model.UserStatusInactive {
-			return &apitypes.OauthLoginResponse{
-				User: feishuUser,
+			return &apitypes.UserLoginResponse{
+				User:  user,
+				Token: "",
 			}, nil
 		}
+
 	case *model.KeycloakUser:
 		u, err := s.genericLogin(ctx, v)
 		if err != nil {
@@ -427,8 +433,9 @@ func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLogi
 		roles = u.Roles
 		user = u
 		if *u.Status == model.UserStatusInactive {
-			return &apitypes.OauthLoginResponse{
-				User: u,
+			return &apitypes.UserLoginResponse{
+				User:  user,
+				Token: "",
 			}, nil
 		}
 	}
@@ -443,7 +450,7 @@ func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLogi
 			log.WithRequestID(ctx).Error("login set empty role cache error", zap.Int64("userID", userID), zap.Error(err))
 		}
 
-		return &apitypes.OauthLoginResponse{
+		return &apitypes.UserLoginResponse{
 			User:  user,
 			Token: token,
 		}, nil
@@ -457,7 +464,7 @@ func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLogi
 		log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", userID), zap.Any("roles", roleNames), zap.Error(err))
 	}
 
-	return &apitypes.OauthLoginResponse{
+	return &apitypes.UserLoginResponse{
 		User:  user,
 		Token: token,
 	}, nil
@@ -489,7 +496,6 @@ func (s *UserService) feishuLogin(ctx context.Context, userInfo *model.FeiShuUse
 			Email:    email,
 		}
 
-		userInfo.Status = helper.Int(model.UserStatusInactive)
 		if err := s.feishuUserStore.Create(ctx, userInfo); err != nil {
 			return nil, err
 		}

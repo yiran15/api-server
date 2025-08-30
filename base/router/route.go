@@ -1,6 +1,12 @@
 package router
 
 import (
+	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/requestid"
+
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	_ "github.com/joho/godotenv/autoload"
 	swaggerFiles "github.com/swaggo/files"
@@ -8,6 +14,8 @@ import (
 	"github.com/yiran15/api-server/base/middleware"
 	"github.com/yiran15/api-server/controller"
 	_ "github.com/yiran15/api-server/docs"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type RouterInterface interface {
@@ -35,7 +43,30 @@ func NewRouter(
 }
 
 func (r *Router) RegisterRouter(engine *gin.Engine) {
-	engine.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsAllowAll), r.middleware.RequestID())
+	// engine.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsAllowAll), r.middleware.RequestID())
+	engine.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	engine.Use(ginzap.GinzapWithConfig(zap.L(), &ginzap.Config{
+		UTC:        false,
+		TimeFormat: time.RFC3339,
+		Context: ginzap.Fn(func(c *gin.Context) []zapcore.Field {
+			fields := []zapcore.Field{}
+			if requestID := requestid.Get(c); requestID != "" {
+				fields = append(fields, zap.String("request-id", requestID))
+			}
+			return fields
+		}),
+	}))
+
+	engine.Use(ginzap.RecoveryWithZap(zap.L(), false))
+	engine.Use(requestid.New())
 
 	r.registerOAuthRouter(engine)
 	apiGroup := engine.Group("/api/v1")
@@ -91,6 +122,7 @@ func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {
 
 func (r *Router) registerOAuthRouter(engine *gin.Engine) {
 	oauthGroup := engine.Group("/oauth")
+	oauthGroup.Use(r.middleware.Session())
 	{
 		oauthGroup.GET("/login", r.userRouter.OAuthLogin)
 		oauthGroup.GET("/callback", r.userRouter.OAuthCallback)

@@ -91,12 +91,8 @@ create table feishu_users
     open_id          longtext          null comment '飞书用户open_id',
     tenant_key       longtext          null comment '飞书用户tenant_key',
     union_id         longtext          null comment '飞书用户union_id',
-    user_id          varchar(191)      null comment '飞书用户ID',
-    status           tinyint default 1 null comment '用户状态,1可用,2禁用,3未激活'
+    user_id          varchar(191)      null comment '飞书用户ID'
 );
 
 create index idx_feishu_users_deleted_at
     on feishu_users (deleted_at);
-
-create index idx_user_id_status
-    on feishu_users (user_id, status);

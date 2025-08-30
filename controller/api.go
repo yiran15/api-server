@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 
+	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
 	"github.com/yiran15/api-server/base/apitypes"
 	"github.com/yiran15/api-server/base/constant"
@@ -101,5 +102,5 @@ func (s *apiController) ListApi(c *gin.Context) {
 // @Success 200 {object} apitypes.Response{data=apitypes.ServerApiData} "查询成功"
 // @Router /api/v1/api/serverApi [get]
 func (s *apiController) GetServerApi(c *gin.Context) {
-	c.JSON(http.StatusOK, apitypes.NewResponse(http.StatusOK, "success", c.GetString(constant.RequestIDContextKey), constant.ApiData))
+	c.JSON(http.StatusOK, apitypes.NewResponse(http.StatusOK, "success", requestid.Get(c), constant.ApiData))
 }

@@ -1,9 +1,15 @@
 package controller
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"net/http"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/yiran15/api-server/base/constant"
 	v1 "github.com/yiran15/api-server/service/v1"
 )
 
@@ -146,16 +152,24 @@ func (u *UserControllerImpl) UserList(c *gin.Context) {
 	ResponseWithData(c, u.userServicer.ListUser, bindTypeQuery)
 }
 
-// OAuthLogin 飞书登录
-// @Summary 飞书登录
-// @Description 使用飞书登录，返回用户信息和 Token
+// OAuthLogin OAuth 登录
+// @Summary OAuth 登录
+// @Description 使用 OAuth 登录，返回用户信息和 Token
 // @Tags 用户管理
 // @Accept json
 // @Produce json
-// @Success 200 {object} apitypes.Response{data=apitypes.UserLoginResponse} "登录成功"
+// @Success 302 {string} string "重定向到 OAuth 登录页面"
 // @Router /api/v1/user/feishu/login [get]
 func (u *UserControllerImpl) OAuthLogin(c *gin.Context) {
-	url, err := u.userServicer.OAuthLogin(c)
+	session := sessions.Default(c)
+	state := uuid.New().String()
+	session.Set("state", state)
+	if err := session.Save(); err != nil {
+		responseError(c, fmt.Errorf("save session failed: %w", err))
+		return
+	}
+	ctx := context.WithValue(c.Request.Context(), constant.StateContextKey, state)
+	url, err := u.userServicer.OAuthLogin(ctx)
 	if err != nil {
 		responseError(c, err)
 		return
@@ -163,9 +177,9 @@ func (u *UserControllerImpl) OAuthLogin(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, url)
 }
 
-// OAuthCallback 飞书回调
-// @Summary 飞书回调
-// @Description 使用飞书回调，返回用户信息和 Token
+// OAuthCallback OAuth 回调
+// @Summary OAuth 回调
+// @Description 使用 OAuth 回调，返回用户信息和 Token
 // @Tags 用户管理
 // @Accept json
 // @Produce json
@@ -173,5 +187,12 @@ func (u *UserControllerImpl) OAuthLogin(c *gin.Context) {
 // @Success 200 {object} apitypes.Response{data=apitypes.UserLoginResponse} "登录成功"
 // @Router /api/v1/user/feishu/callback [get]
 func (u *UserControllerImpl) OAuthCallback(c *gin.Context) {
+	state := c.Query("state")
+	if state == "" {
+		responseError(c, errors.New("state is empty"))
+		return
+	}
+	ctx := context.WithValue(c.Request.Context(), constant.StateContextKey, state)
+	c.Request = c.Request.WithContext(ctx)
 	ResponseWithData(c, u.userServicer.OAuthCallback, bindTypeQuery)
 }

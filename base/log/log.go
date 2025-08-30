@@ -50,7 +50,7 @@ func NewLogger() {
 }
 
 func WithRequestID(ctx context.Context) *zap.Logger {
-	return zap.L().With(zap.String("request_id", helper.GetRequestIDFromContext(ctx)))
+	return zap.L().With(zap.String("request-id", helper.GetRequestIDFromContext(ctx)))
 }
 
 func WithBody(ctx context.Context, body any) *zap.Logger {
