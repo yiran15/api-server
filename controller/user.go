@@ -168,8 +168,10 @@ func (u *UserControllerImpl) OAuthLogin(c *gin.Context) {
 		responseError(c, fmt.Errorf("save session failed: %w", err))
 		return
 	}
+
 	ctx := context.WithValue(c.Request.Context(), constant.StateContextKey, state)
-	url, err := u.userServicer.OAuthLogin(ctx)
+	provider := c.Query("provider")
+	url, err := u.userServicer.OAuthLogin(ctx, provider)
 	if err != nil {
 		responseError(c, err)
 		return

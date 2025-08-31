@@ -72,8 +72,9 @@ type UserUpdateRoleRequest struct {
 }
 
 type OAuthLoginRequest struct {
-	Code  string `form:"code" validate:"required"`
-	State string `form:"state" validate:"required"`
+	Provider string `form:"provider" validate:"required"`
+	Code     string `form:"code" validate:"required"`
+	State    string `form:"state" validate:"required"`
 }
 
 type OauthLoginResponse struct {

@@ -43,7 +43,6 @@ func NewRouter(
 }
 
 func (r *Router) RegisterRouter(engine *gin.Engine) {
-	// engine.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsAllowAll), r.middleware.RequestID())
 	engine.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -52,10 +51,7 @@ func (r *Router) RegisterRouter(engine *gin.Engine) {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-
 	engine.Use(ginzap.GinzapWithConfig(zap.L(), &ginzap.Config{
-		UTC:        false,
-		TimeFormat: time.RFC3339,
 		Context: ginzap.Fn(func(c *gin.Context) []zapcore.Field {
 			fields := []zapcore.Field{}
 			if requestID := requestid.Get(c); requestID != "" {
@@ -65,7 +61,7 @@ func (r *Router) RegisterRouter(engine *gin.Engine) {
 		}),
 	}))
 
-	engine.Use(ginzap.RecoveryWithZap(zap.L(), false))
+	engine.Use(ginzap.RecoveryWithZap(zap.L(), true))
 	engine.Use(requestid.New())
 
 	r.registerOAuthRouter(engine)
@@ -103,7 +99,6 @@ func (r *Router) registerRoleRouter(apiGroup *gin.RouterGroup) {
 		roleGroup.GET("/:id", r.roleRouter.QueryRole)
 		roleGroup.GET("", r.roleRouter.ListRole)
 	}
-
 }
 
 func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {

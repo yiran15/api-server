@@ -12,8 +12,8 @@
       "program": "${workspaceFolder}/cmd/apiserver/main.go",
       "args": ["-c", "${workspaceFolder}/config.yaml"],
       "env": {
-        "SERVICE_NAME": "api-server",
-        "API_SERVER_SERVER_BIND": ":8090"
+        "SERVICE_NAME": "api-server"
+        // "API_SERVER_SERVER_BIND": ":8090"
         // "API_SERVER_CONFIG_PATH": "${workspaceFolder}/config.yaml"
       }
     },

@@ -26,7 +26,7 @@ type UserServicer interface {
 }
 
 type OAuthServicer interface {
-	OAuthLogin(ctx context.Context) (string, error)
+	OAuthLogin(ctx context.Context, provider string) (string, error)
 	OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error)
 }
 
@@ -380,12 +380,12 @@ func (s *UserService) checkPasswordHash(password, hash string) bool {
 	return err == nil // 如果没有错误，则匹配成功
 }
 
-func (s *UserService) OAuthLogin(ctx context.Context) (string, error) {
+func (s *UserService) OAuthLogin(ctx context.Context, provider string) (string, error) {
 	state, ok := ctx.Value(constant.StateContextKey).(string)
 	if !ok {
 		return "", errors.New("state not found")
 	}
-	return s.oauth.Redirect(state), nil
+	return s.oauth.Redirect(state, provider), nil
 }
 
 func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error) {
@@ -395,12 +395,12 @@ func (s *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLogi
 		roles    []*model.Role
 		user     *model.User
 	)
-	oauthToken, err := s.oauth.Auth(ctx, req.State, req.Code)
+	oauthToken, err := s.oauth.Auth(ctx, req.State, req.Code, req.Provider)
 	if err != nil {
 		return nil, err
 	}
 
-	userInfo, err := s.oauth.UserInfo(ctx, oauthToken)
+	userInfo, err := s.oauth.UserInfo(ctx, oauthToken, req.Provider)
 	if err != nil {
 		return nil, err
 	}

@@ -4,47 +4,77 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
-	"github.com/yiran15/api-server/base/conf"
+	"github.com/spf13/viper"
 	"github.com/yiran15/api-server/base/constant"
 	"github.com/yiran15/api-server/base/helper"
 	"github.com/yiran15/api-server/model"
 	"golang.org/x/oauth2"
 )
 
+type OAuth2ProviderConfig struct {
+	UserInfoUrl  string   `mapstructure:"userInfoUrl"`
+	ClientId     string   `mapstructure:"clientId"`
+	ClientSecret string   `mapstructure:"clientSecret"`
+	Scopes       []string `mapstructure:"scopes"`
+	AuthUrl      string   `mapstructure:"authUrl"`
+	TokenUrl     string   `mapstructure:"tokenUrl"`
+	RedirectUrl  string   `mapstructure:"redirectUrl"`
+}
+
 type OAuth2 struct {
-	Name        string
+	Enable    bool
+	Providers map[string]*Provider
+}
+
+type Provider struct {
 	UserInfoUrl string
 	OAuthConfig *oauth2.Config
 }
 
 func NewOAuth2() (*OAuth2, error) {
-	if !conf.GetOauthEnable() {
+	enable := viper.GetBool("oauth2.enable")
+	if !enable {
 		return nil, nil
 	}
-	oauthConfig, err := conf.GetOauth2Config()
-	if err != nil {
-		return nil, err
+
+	providerConfigs := make(map[string]*OAuth2ProviderConfig)
+	if err := viper.UnmarshalKey("oauth2.providers", &providerConfigs); err != nil {
+		return nil, fmt.Errorf("unmarshal oauth2.providers faild. err: %w", err)
 	}
-	userInfoUrl, err := conf.GetOauth2UserInfoUrl()
-	if err != nil {
-		return nil, err
+
+	providers := make(map[string]*Provider)
+	for name, providerConfig := range providerConfigs {
+		providers[name] = &Provider{
+			UserInfoUrl: providerConfig.UserInfoUrl,
+			OAuthConfig: &oauth2.Config{
+				ClientID:     providerConfig.ClientId,
+				ClientSecret: providerConfig.ClientSecret,
+				Endpoint: oauth2.Endpoint{
+					AuthURL:  providerConfig.AuthUrl,
+					TokenURL: providerConfig.TokenUrl,
+				},
+				RedirectURL: providerConfig.RedirectUrl,
+				Scopes:      providerConfig.Scopes,
+			},
+		}
 	}
-	name := conf.GetOauth2Name()
-	return &OAuth2{
-		Name:        name,
-		OAuthConfig: oauthConfig,
-		UserInfoUrl: userInfoUrl,
-	}, nil
+
+	return &OAuth2{Enable: enable, Providers: providers}, nil
 }
 
-func (f *OAuth2) Redirect(state string) string {
-	return f.OAuthConfig.AuthCodeURL(state)
+func (f *OAuth2) Redirect(state string, provider string) string {
+	p, ok := f.Providers[provider]
+	if !ok {
+		return ""
+	}
+	return p.OAuthConfig.AuthCodeURL(state)
 }
 
-func (f *OAuth2) Auth(ctx context.Context, state, code string) (*oauth2.Token, error) {
+func (f *OAuth2) Auth(ctx context.Context, state, code, provider string) (*oauth2.Token, error) {
 	ctxState, ok := ctx.Value(constant.StateContextKey).(string)
 	if !ok {
 		return nil, errors.New("state not found")
@@ -55,12 +85,20 @@ func (f *OAuth2) Auth(ctx context.Context, state, code string) (*oauth2.Token, e
 	if state != ctxState {
 		return nil, errors.New("state is not match")
 	}
-	return f.OAuthConfig.Exchange(ctx, code)
+	p, ok := f.Providers[provider]
+	if !ok {
+		return nil, fmt.Errorf("provider %s not found", provider)
+	}
+	return p.OAuthConfig.Exchange(ctx, code)
 }
 
-func (f *OAuth2) UserInfo(ctx context.Context, token *oauth2.Token) (any, error) {
-	client := f.OAuthConfig.Client(ctx, token)
-	req, err := http.NewRequest("GET", f.UserInfoUrl, nil)
+func (f *OAuth2) UserInfo(ctx context.Context, token *oauth2.Token, provider string) (any, error) {
+	p, ok := f.Providers[provider]
+	if !ok {
+		return nil, fmt.Errorf("provider %s not found", provider)
+	}
+	client := p.OAuthConfig.Client(ctx, token)
+	req, err := http.NewRequest("GET", p.UserInfoUrl, nil)
 	if err != nil {
 		return nil, err
 	}

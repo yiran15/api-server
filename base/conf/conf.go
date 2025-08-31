@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"golang.org/x/oauth2"
 )
 
 const (
@@ -230,58 +229,4 @@ func GetRedisKeyPrefix() (string, error) {
 		return "", fmt.Errorf("redis.keyPrefix is empty")
 	}
 	return prefix, nil
-}
-
-// 获取oauth2配置
-func GetOauth2Config() (*oauth2.Config, error) {
-	clientID := viper.GetString("oauth2.clientId")
-	if clientID == "" {
-		return nil, fmt.Errorf("oauth2.clientId is empty")
-	}
-	clientSecret := viper.GetString("oauth2.clientSecret")
-	if clientSecret == "" {
-		return nil, fmt.Errorf("oauth2.clientSecret is empty")
-	}
-	authUrl := viper.GetString("oauth2.authUrl")
-	if authUrl == "" {
-		return nil, fmt.Errorf("oauth2.authUrl is empty")
-	}
-	tokenUrl := viper.GetString("oauth2.tokenUrl")
-	if tokenUrl == "" {
-		return nil, fmt.Errorf("oauth2.tokenUrl is empty")
-	}
-	redirectUrl := viper.GetString("oauth2.redirectUrl")
-	if redirectUrl == "" {
-		return nil, fmt.Errorf("oauth2.redirectUrl is empty")
-	}
-	scopes := viper.GetStringSlice("oauth2.scopes")
-	return &oauth2.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  authUrl,
-			TokenURL: tokenUrl,
-		},
-		RedirectURL: redirectUrl,
-		Scopes:      scopes,
-	}, nil
-}
-
-func GetOauth2UserInfoUrl() (string, error) {
-	if url := viper.GetString("oauth2.userInfoUrl"); url != "" {
-		return url, nil
-	}
-	return "", fmt.Errorf("oauth2.userInfoUrl is empty")
-}
-
-func GetOauth2Name() string {
-	name := viper.GetString("oauth2.name")
-	if name == "" {
-		return "oauth2"
-	}
-	return name
-}
-
-func GetOauthEnable() bool {
-	return viper.GetBool("oauth2.enable")
 }
