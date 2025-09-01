@@ -28,7 +28,7 @@ func NewLogger() {
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.CapitalLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeTime:     zapcore.RFC3339TimeEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
 	encoder = zapcore.NewJSONEncoder(config)
