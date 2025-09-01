@@ -4,6 +4,9 @@ services:
     restart: always
     container_name: apiserver
     environment:
+      - TZ=Asia/Shanghai
+      - SERVICE_NAME=api-server
+      - API_SERVER_SERVER_BIND=:8080
       - CONFIG_PATH=/app/config.yaml
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://10.10.10.10:30001
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
