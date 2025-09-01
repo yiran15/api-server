@@ -2,7 +2,9 @@ package log
 
 import (
 	"context"
+	golog "log"
 	"os"
+	"time"
 
 	"github.com/yiran15/api-server/base/conf"
 	"github.com/yiran15/api-server/base/helper"
@@ -18,6 +20,12 @@ func NewLogger() {
 		logLevel zapcore.Level
 	)
 	logLevelStr := conf.GetLogLevel()
+	cst, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		golog.Printf("failed to load location: %v, use local time instead", err)
+		cst = time.Local
+	}
+
 	config := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
@@ -28,8 +36,10 @@ func NewLogger() {
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.CapitalLevelEncoder,
-		EncodeTime:     zapcore.RFC3339TimeEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
+		EncodeTime: func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+			enc.AppendString(t.In(cst).Format(time.RFC3339))
+		},
+		EncodeCaller: zapcore.ShortCallerEncoder,
 	}
 	encoder = zapcore.NewJSONEncoder(config)
 	writer = zapcore.AddSync(os.Stderr)
