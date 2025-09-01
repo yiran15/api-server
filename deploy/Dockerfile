@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     export GOPROXY=https://goproxy.cn,direct && \
     otel go build -o apiserver -ldflags="-s -w" ${MAIN_PATH}
 
-FROM registry.cn-beijing.aliyuncs.com/qqlx/alpine:3.12
+FROM registry.cn-beijing.aliyuncs.com/qqlx/alpine:3.12-cst
 WORKDIR /app
 COPY --from=builder /app/apiserver .
 CMD ["./apiserver"]
