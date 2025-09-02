@@ -64,9 +64,9 @@ func (r *Router) RegisterRouter(engine *gin.Engine) {
 	engine.Use(ginzap.RecoveryWithZap(zap.L(), true))
 	engine.Use(requestid.New())
 
-	r.registerOAuthRouter(engine)
 	apiGroup := engine.Group("/api/v1")
 	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.registerOAuthRouter(apiGroup)
 	r.registerUserRouter(apiGroup)
 	r.registerRoleRouter(apiGroup)
 	r.registerApiRouter(apiGroup)
@@ -115,10 +115,11 @@ func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {
 	}
 }
 
-func (r *Router) registerOAuthRouter(engine *gin.Engine) {
-	oauthGroup := engine.Group("/oauth")
+func (r *Router) registerOAuthRouter(apiGroup *gin.RouterGroup) {
+	oauthGroup := apiGroup.Group("/oauth2")
 	oauthGroup.Use(r.middleware.Session())
 	{
+		oauthGroup.GET("/provider", r.userRouter.OAuth2Provider)
 		oauthGroup.GET("/login", r.userRouter.OAuthLogin)
 		oauthGroup.GET("/callback", r.userRouter.OAuthCallback)
 	}

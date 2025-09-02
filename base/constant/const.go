@@ -15,8 +15,9 @@ var RequestIDContextKey = requestIDContextKey{}
 var ApiData apitypes.ServerApiData
 
 const (
-	FlagConfigPath    = "config-path"
-	AuthMidwareKey    = "user"
-	RequestIDHeader   = "X-Request-Id"
-	EmptyRoleSentinel = "__empty__"
+	FlagConfigPath     = "config-path"
+	AuthMidwareKey     = "user"
+	RequestIDHeader    = "X-Request-Id"
+	EmptyRoleSentinel  = "__empty__"
+	OAuth2ProviderList = "oauth2:provider:list"
 )

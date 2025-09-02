@@ -63,6 +63,8 @@ func runApp(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("load config file faild: %w", err)
 	}
 	baselog.NewLogger()
+	zap.L().Debug("config loaded", zap.Any("config", conf.AllConfig()))
+
 	ctx, stop := signal.NotifyContext(context.TODO(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 

@@ -20,9 +20,10 @@ func NewLogger() {
 		logLevel zapcore.Level
 	)
 	logLevelStr := conf.GetLogLevel()
-	cst, err := time.LoadLocation("Asia/Shanghai")
+	timeZone := conf.GetServerTimeZone()
+	cst, err := time.LoadLocation(timeZone)
 	if err != nil {
-		golog.Printf("failed to load location: %v, use local time instead", err)
+		golog.Printf("failed to load location %s: %v, use local time instead", timeZone, err)
 		cst = time.Local
 	}
 

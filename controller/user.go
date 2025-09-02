@@ -25,6 +25,7 @@ type UserController interface {
 	UserInfo(c *gin.Context)
 	OAuthLogin(c *gin.Context)
 	OAuthCallback(c *gin.Context)
+	OAuth2Provider(c *gin.Context)
 }
 
 type UserControllerImpl struct {
@@ -197,4 +198,16 @@ func (u *UserControllerImpl) OAuthCallback(c *gin.Context) {
 	ctx := context.WithValue(c.Request.Context(), constant.StateContextKey, state)
 	c.Request = c.Request.WithContext(ctx)
 	ResponseWithData(c, u.userServicer.OAuthCallback, bindTypeQuery)
+}
+
+// OAuth2Provider OAuth2 提供商列表
+// @Summary OAuth2 提供商列表
+// @Description 获取 OAuth2 提供商列表
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} apitypes.Response{data=[]string} "获取成功"
+// @Router /api/v1/user/feishu/provider [get]
+func (u *UserControllerImpl) OAuth2Provider(c *gin.Context) {
+	ResponseWithDataNoBind(c, u.userServicer.OAuth2Provider)
 }
