@@ -2,10 +2,10 @@ package localcache
 
 import (
 	"fmt"
+	"github.com/yiran15/api-server/base/constant"
 	"time"
 
 	gocache "github.com/patrickmn/go-cache"
-	"github.com/yiran15/api-server/base/constant"
 	"github.com/yiran15/api-server/pkg/oauth"
 )
 
@@ -19,8 +19,8 @@ type Cache struct {
 }
 
 func NewCacher(oauth *oauth.OAuth2) Cacher {
-	oauth2ProviderList := make([]string, 0, len(oauth.Providers))
-	if oauth.Enable && len(oauth.Providers) > 0 {
+	oauth2ProviderList := make([]string, 0)
+	if oauth != nil {
 		for key := range oauth.Providers {
 			oauth2ProviderList = append(oauth2ProviderList, key)
 		}
@@ -30,7 +30,9 @@ func NewCacher(oauth *oauth.OAuth2) Cacher {
 		cache: c,
 	}
 
-	cache.SetCache(constant.OAuth2ProviderList, oauth2ProviderList, gocache.NoExpiration)
+	if oauth != nil {
+		cache.SetCache(constant.OAuth2ProviderList, oauth2ProviderList, gocache.NoExpiration)
+	}
 	return cache
 }
 

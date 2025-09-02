@@ -4,12 +4,12 @@ import "github.com/yiran15/api-server/base/apitypes"
 
 type userContextKey struct{}
 
-type stateContextKey struct{}
+type providerContextKey struct{}
 
 type requestIDContextKey struct{}
 
 var UserContextKey = userContextKey{}
-var StateContextKey = stateContextKey{}
+var ProviderContextKey = providerContextKey{}
 var RequestIDContextKey = requestIDContextKey{}
 
 var ApiData apitypes.ServerApiData

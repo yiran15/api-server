@@ -27,7 +27,7 @@ type UserServicer interface {
 }
 
 type OAuthServicer interface {
-	OAuthLogin(ctx context.Context, provider string) (string, error)
+	OAuthLogin(provider, state string) (string, error)
 	OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error)
 	OAuth2Provider(ctx context.Context) ([]string, error)
 }
@@ -384,11 +384,7 @@ func (reveive *UserService) checkPasswordHash(password, hash string) bool {
 	return err == nil // 如果没有错误，则匹配成功
 }
 
-func (reveive *UserService) OAuthLogin(ctx context.Context, provider string) (string, error) {
-	state, ok := ctx.Value(constant.StateContextKey).(string)
-	if !ok {
-		return "", errors.New("state not found")
-	}
+func (reveive *UserService) OAuthLogin(provider, state string) (string, error) {
 	return reveive.oauth.Redirect(state, provider), nil
 }
 
@@ -399,12 +395,17 @@ func (reveive *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAu
 		roles    []*model.Role
 		user     *model.User
 	)
-	oauthToken, err := reveive.oauth.Auth(ctx, req.State, req.Code, req.Provider)
+	provider, ok := ctx.Value(constant.ProviderContextKey).(string)
+	if !ok {
+		return nil, errors.New("invalid provider")
+	}
+
+	oauthToken, err := reveive.oauth.Auth(ctx, req.Code, provider)
 	if err != nil {
 		return nil, err
 	}
 
-	userInfo, err := reveive.oauth.UserInfo(ctx, oauthToken, req.Provider)
+	userInfo, err := reveive.oauth.UserInfo(ctx, oauthToken, provider)
 	if err != nil {
 		return nil, err
 	}
@@ -542,7 +543,7 @@ func (reveive *UserService) genericLogin(ctx context.Context, userInfo *model.Ke
 	return data, nil
 }
 
-func (reveive *UserService) OAuth2Provider(ctx context.Context) ([]string, error) {
+func (reveive *UserService) OAuth2Provider(_ context.Context) ([]string, error) {
 	data, err := reveive.localCache.GetCache(constant.OAuth2ProviderList)
 	if err != nil {
 		return nil, err

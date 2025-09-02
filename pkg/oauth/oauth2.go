@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/spf13/viper"
-	"github.com/yiran15/api-server/base/constant"
 	"github.com/yiran15/api-server/base/helper"
 	"github.com/yiran15/api-server/model"
 	"golang.org/x/oauth2"
@@ -74,17 +73,7 @@ func (f *OAuth2) Redirect(state string, provider string) string {
 	return p.OAuthConfig.AuthCodeURL(state)
 }
 
-func (f *OAuth2) Auth(ctx context.Context, state, code, provider string) (*oauth2.Token, error) {
-	ctxState, ok := ctx.Value(constant.StateContextKey).(string)
-	if !ok {
-		return nil, errors.New("state not found")
-	}
-	if ctxState == "" {
-		return nil, errors.New("state is empty")
-	}
-	if state != ctxState {
-		return nil, errors.New("state is not match")
-	}
+func (f *OAuth2) Auth(ctx context.Context, code, provider string) (*oauth2.Token, error) {
 	p, ok := f.Providers[provider]
 	if !ok {
 		return nil, fmt.Errorf("provider %s not found", provider)

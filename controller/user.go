@@ -160,24 +160,26 @@ func (u *UserControllerImpl) UserList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 302 {string} string "重定向到 OAuth 登录页面"
-// @Router /api/v1/user/feishu/login [get]
+// @Router /api/v1/oauth2/login [get]
 func (u *UserControllerImpl) OAuthLogin(c *gin.Context) {
 	session := sessions.Default(c)
 	state := uuid.New().String()
 	session.Set("state", state)
+	provider := c.Query("provider")
+	if provider != "" {
+		session.Set("provider", provider)
+	}
+
 	if err := session.Save(); err != nil {
 		responseError(c, fmt.Errorf("save session failed: %w", err))
 		return
 	}
-
-	ctx := context.WithValue(c.Request.Context(), constant.StateContextKey, state)
-	provider := c.Query("provider")
-	url, err := u.userServicer.OAuthLogin(ctx, provider)
+	url, err := u.userServicer.OAuthLogin(provider, state)
 	if err != nil {
 		responseError(c, err)
 		return
 	}
-	c.Redirect(http.StatusSeeOther, url)
+	c.Redirect(http.StatusFound, url)
 }
 
 // OAuthCallback OAuth 回调
@@ -190,12 +192,19 @@ func (u *UserControllerImpl) OAuthLogin(c *gin.Context) {
 // @Success 200 {object} apitypes.Response{data=apitypes.UserLoginResponse} "登录成功"
 // @Router /api/v1/user/feishu/callback [get]
 func (u *UserControllerImpl) OAuthCallback(c *gin.Context) {
+	session := sessions.Default(c)
+	stateSession := session.Get("state")
+	providerSession := session.Get("provider")
 	state := c.Query("state")
 	if state == "" {
 		responseError(c, errors.New("state is empty"))
 		return
 	}
-	ctx := context.WithValue(c.Request.Context(), constant.StateContextKey, state)
+	if state != stateSession {
+		responseError(c, errors.New("state invalid"))
+		return
+	}
+	ctx := context.WithValue(c.Request.Context(), constant.ProviderContextKey, providerSession)
 	c.Request = c.Request.WithContext(ctx)
 	ResponseWithData(c, u.userServicer.OAuthCallback, bindTypeQuery)
 }
