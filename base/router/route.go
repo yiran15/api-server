@@ -75,17 +75,17 @@ func (r *Router) RegisterRouter(engine *gin.Engine) {
 func (r *Router) registerUserRouter(apiGroup *gin.RouterGroup) {
 	userGroup := apiGroup.Group("/user")
 	{
-		userGroup.POST("/login", r.userRouter.UserLogin)
+		userGroup.POST("/login", r.userRouter.UserLoginController)
 		userGroup.Use(r.middleware.Auth())
-		userGroup.POST("/logout", r.userRouter.UserLogout)
-		userGroup.GET("/info", r.userRouter.UserInfo)
-		userGroup.PUT("/self", r.userRouter.UserUpdateBySelf)
+		userGroup.POST("/logout", r.userRouter.UserLogoutController)
+		userGroup.GET("/info", r.userRouter.UserInfoController)
+		userGroup.PUT("/self", r.userRouter.UserUpdateBySelfController)
 		userGroup.Use(r.middleware.AuthZ())
-		userGroup.POST("/register", r.userRouter.UserCreate)
-		userGroup.PUT("/:id", r.userRouter.UserUpdateByAdmin)
-		userGroup.GET("/:id", r.userRouter.UserQuery)
-		userGroup.GET("", r.userRouter.UserList)
-		userGroup.DELETE("/:id", r.userRouter.UserDelete)
+		userGroup.POST("/register", r.userRouter.UserCreateController)
+		userGroup.PUT("/:id", r.userRouter.UserUpdateByAdminController)
+		userGroup.GET("/:id", r.userRouter.UserQueryController)
+		userGroup.GET("", r.userRouter.UserListController)
+		userGroup.DELETE("/:id", r.userRouter.UserDeleteController)
 	}
 }
 
@@ -119,8 +119,9 @@ func (r *Router) registerOAuthRouter(apiGroup *gin.RouterGroup) {
 	oauthGroup := apiGroup.Group("/oauth2")
 	oauthGroup.Use(r.middleware.Session())
 	{
-		oauthGroup.GET("/provider", r.userRouter.OAuth2Provider)
-		oauthGroup.GET("/login", r.userRouter.OAuthLogin)
-		oauthGroup.GET("/callback", r.userRouter.OAuthCallback)
+		oauthGroup.GET("/provider", r.userRouter.OAuth2ProviderController)
+		oauthGroup.GET("/login", r.userRouter.OAuth2LoginController)
+		oauthGroup.GET("/callback", r.userRouter.OAuth2CallbackController)
+		oauthGroup.POST("/:id", r.userRouter.OAuth2ActivateController)
 	}
 }

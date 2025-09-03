@@ -79,10 +79,9 @@ func (r *repository[T]) DeleteBatch(ctx context.Context, objs []*T, opts ...Opti
 }
 
 // Query 查询单个对象。
-// 如果未找到记录，则返回 apierr.NotFoundErr。
 func (r *repository[T]) Query(ctx context.Context, opts ...Option) (*T, error) {
-	model := new(T)                    // 创建一个 T 类型的零值实例，用于 GORM 的 First 方法
-	db := r.getDB(ctx, model, opts...) // 先应用所有查询选项
+	model := new(T)
+	db := r.getDB(ctx, model, opts...)
 	if err := db.First(model).Error; err != nil {
 		log.WithRequestID(ctx).Error("failed to query object", zap.Error(err))
 		return nil, err

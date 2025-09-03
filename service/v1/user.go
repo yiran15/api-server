@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,9 +28,10 @@ type UserServicer interface {
 }
 
 type OAuthServicer interface {
-	OAuthLogin(provider, state string) (string, error)
-	OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error)
 	OAuth2Provider(ctx context.Context) ([]string, error)
+	OAuth2Login(provider, state string) (string, error)
+	OAuth2Callback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error)
+	OAuth2Activate(ctx context.Context, req *apitypes.OAuthActivateRequest) (*apitypes.UserLoginResponse, error)
 }
 
 type GeneralUserServicer interface {
@@ -68,8 +70,8 @@ func NewUserService(userStore store.UserStorer, roleStore store.RoleStorer, cach
 	}
 }
 
-func (reveive *UserService) Login(ctx context.Context, req *apitypes.UserLoginRequest) (*apitypes.UserLoginResponse, error) {
-	user, err := reveive.userStore.Query(ctx, store.Where("email", req.Email), store.Where("status", 1), store.Preload(model.PreloadRoles))
+func (receiver *UserService) Login(ctx context.Context, req *apitypes.UserLoginRequest) (*apitypes.UserLoginResponse, error) {
+	user, err := receiver.userStore.Query(ctx, store.Where("email", req.Email), store.Where("status", 1), store.Preload(model.PreloadRoles))
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
@@ -77,16 +79,16 @@ func (reveive *UserService) Login(ctx context.Context, req *apitypes.UserLoginRe
 		return nil, errors.New("user not found")
 	}
 
-	if !reveive.checkPasswordHash(req.Password, user.Password) {
+	if !receiver.checkPasswordHash(req.Password, user.Password) {
 		return nil, errors.New("invalid password")
 	}
-	token, err := reveive.jwt.GenerateToken(user.ID, user.Name)
+	token, err := receiver.jwt.GenerateToken(user.ID, user.Name)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(user.Roles) == 0 {
-		if err := reveive.cacheStore.SetSet(ctx, store.RoleType, user.ID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
+		if err := receiver.cacheStore.SetSet(ctx, store.RoleType, user.ID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
 			log.WithRequestID(ctx).Error("login set empty role cache error", zap.Int64("userID", user.ID), zap.Error(err))
 		}
 	}
@@ -95,7 +97,7 @@ func (reveive *UserService) Login(ctx context.Context, req *apitypes.UserLoginRe
 	for _, role := range user.Roles {
 		roleNames = append(roleNames, role.Name)
 	}
-	if err := reveive.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil); err != nil {
+	if err := receiver.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil); err != nil {
 		log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", user.ID), zap.Any("roles", roleNames), zap.Error(err))
 	}
 
@@ -105,15 +107,15 @@ func (reveive *UserService) Login(ctx context.Context, req *apitypes.UserLoginRe
 	}, nil
 }
 
-func (reveive *UserService) Logout(ctx context.Context) error {
-	mc, err := reveive.jwt.GetUser(ctx)
+func (receiver *UserService) Logout(ctx context.Context) error {
+	mc, err := receiver.jwt.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	return reveive.cacheStore.DelKey(ctx, store.RoleType, mc.UserID)
+	return receiver.cacheStore.DelKey(ctx, store.RoleType, mc.UserID)
 }
 
-func (reveive *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error {
+func (receiver *UserService) CreateUser(ctx context.Context, req *apitypes.UserCreateRequest) error {
 	var (
 		user  *model.User
 		err   error
@@ -125,7 +127,7 @@ func (reveive *UserService) CreateUser(ctx context.Context, req *apitypes.UserCr
 		*req.RolesID = helper.RemoveDuplicates(*req.RolesID)
 	}
 
-	if user, err = reveive.userStore.Query(ctx, store.Where("email", req.Email), store.Where("status", 1)); err != nil {
+	if user, err = receiver.userStore.Query(ctx, store.Where("email", req.Email), store.Where("status", 1)); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
@@ -135,13 +137,13 @@ func (reveive *UserService) CreateUser(ctx context.Context, req *apitypes.UserCr
 		return fmt.Errorf("user %s already exists", req.Name)
 	}
 
-	hashedPassword, err := reveive.hashPassword(req.Password)
+	hashedPassword, err := receiver.hashPassword(req.Password)
 	if err != nil {
 		return err
 	}
 
 	if req.RolesID != nil {
-		total, roles, err = reveive.roleStore.List(ctx, 0, 0, "", "", store.In("id", *req.RolesID))
+		total, roles, err = receiver.roleStore.List(ctx, 0, 0, "", "", store.In("id", *req.RolesID))
 		if err != nil {
 			return err
 		}
@@ -159,8 +161,8 @@ func (reveive *UserService) CreateUser(ctx context.Context, req *apitypes.UserCr
 		Mobile:   req.Mobile,
 	}
 
-	return reveive.tx.Transaction(ctx, func(ctx context.Context) error {
-		if err = reveive.userStore.Create(ctx, user); err != nil {
+	return receiver.tx.Transaction(ctx, func(ctx context.Context) error {
+		if err = receiver.userStore.Create(ctx, user); err != nil {
 			return err
 		}
 
@@ -168,12 +170,12 @@ func (reveive *UserService) CreateUser(ctx context.Context, req *apitypes.UserCr
 			return nil
 		}
 
-		return reveive.userStore.AppendAssociation(ctx, user, model.PreloadRoles, roles)
+		return receiver.userStore.AppendAssociation(ctx, user, model.PreloadRoles, roles)
 	})
 }
 
-func (reveive *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
-	if err := reveive.updateUser(ctx, nil, req); err != nil {
+func (receiver *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes.UserUpdateAdminRequest) error {
+	if err := receiver.updateUser(ctx, nil, req); err != nil {
 		return err
 	}
 
@@ -181,51 +183,51 @@ func (reveive *UserService) UpdateUserByAdmin(ctx context.Context, req *apitypes
 		return nil
 	}
 
-	return reveive.updateRole(ctx, &apitypes.UserUpdateRoleRequest{
+	return receiver.updateRole(ctx, &apitypes.UserUpdateRoleRequest{
 		ID:      req.ID,
 		RolesID: *req.RolesID,
 	})
 }
 
-func (reveive *UserService) UpdateUserBySelf(ctx context.Context, req *apitypes.UserUpdateSelfRequest) error {
-	mc, err := reveive.jwt.GetUser(ctx)
+func (receiver *UserService) UpdateUserBySelf(ctx context.Context, req *apitypes.UserUpdateSelfRequest) error {
+	mc, err := receiver.jwt.GetUser(ctx)
 	if err != nil {
 		return err
 	}
-	user, err := reveive.userStore.Query(ctx, store.Where("id", mc.UserID))
+	user, err := receiver.userStore.Query(ctx, store.Where("id", mc.UserID))
 	if err != nil {
 		return err
 	}
 	if req.OldPassword == "" {
 		return errors.New("old password is required")
 	}
-	if !reveive.checkPasswordHash(req.OldPassword, user.Password) {
+	if !receiver.checkPasswordHash(req.OldPassword, user.Password) {
 		return errors.New("invalid old password")
 	}
 	newReq := new(apitypes.UserUpdateAdminRequest)
 	newReq.ID = mc.UserID
 	newReq.UserUpdateSelfRequest = req
-	return reveive.updateUser(ctx, user, newReq)
+	return receiver.updateUser(ctx, user, newReq)
 }
 
-func (reveive *UserService) DeleteUser(ctx context.Context, req *apitypes.IDRequest) error {
-	user, err := reveive.userStore.Query(ctx, store.Where("id", req.ID))
+func (receiver *UserService) DeleteUser(ctx context.Context, req *apitypes.IDRequest) error {
+	user, err := receiver.userStore.Query(ctx, store.Where("id", req.ID))
 	if err != nil {
 		return err
 	}
-	if err := reveive.userStore.Delete(ctx, user); err != nil {
+	if err := receiver.userStore.Delete(ctx, user); err != nil {
 		return err
 	}
 
-	return reveive.userStore.ClearAssociation(ctx, user, model.PreloadRoles)
+	return receiver.userStore.ClearAssociation(ctx, user, model.PreloadRoles)
 }
 
-func (reveive *UserService) QueryUser(ctx context.Context, req *apitypes.IDRequest) (*model.User, error) {
-	return reveive.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
+func (receiver *UserService) QueryUser(ctx context.Context, req *apitypes.IDRequest) (*model.User, error) {
+	return receiver.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
 }
 
-func (reveive *UserService) Info(ctx context.Context) (*model.User, error) {
-	mc, err := reveive.jwt.GetUser(ctx)
+func (receiver *UserService) Info(ctx context.Context) (*model.User, error) {
+	mc, err := receiver.jwt.GetUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -233,10 +235,10 @@ func (reveive *UserService) Info(ctx context.Context) (*model.User, error) {
 		log.WithRequestID(ctx).Error("user not found", zap.Int64("userId", mc.UserID), zap.String("userName", mc.UserName))
 		return nil, errors.New("user not found")
 	}
-	return reveive.userStore.Query(ctx, store.Where("id", mc.UserID), store.Preload(model.PreloadRoles))
+	return receiver.userStore.Query(ctx, store.Where("id", mc.UserID), store.Preload(model.PreloadRoles))
 }
 
-func (reveive *UserService) ListUser(ctx context.Context, req *apitypes.UserListRequest) (*apitypes.UserListResponse, error) {
+func (receiver *UserService) ListUser(ctx context.Context, req *apitypes.UserListRequest) (*apitypes.UserListResponse, error) {
 	var (
 		likeOpt   store.Option
 		statusOpt store.Option
@@ -263,7 +265,7 @@ func (reveive *UserService) ListUser(ctx context.Context, req *apitypes.UserList
 		oder = req.Direction
 	}
 
-	total, objs, err := reveive.userStore.List(ctx, req.Page, req.PageSize, filed, oder, likeOpt, statusOpt)
+	total, objs, err := receiver.userStore.List(ctx, req.Page, req.PageSize, filed, oder, likeOpt, statusOpt)
 	if err != nil {
 		return nil, err
 	}
@@ -280,10 +282,10 @@ func (reveive *UserService) ListUser(ctx context.Context, req *apitypes.UserList
 	return res, nil
 }
 
-func (reveive *UserService) updateUser(ctx context.Context, user *model.User, req *apitypes.UserUpdateAdminRequest) error {
+func (receiver *UserService) updateUser(ctx context.Context, user *model.User, req *apitypes.UserUpdateAdminRequest) error {
 	var err error
 	if user == nil {
-		user, err = reveive.userStore.Query(ctx, store.Where("id", req.ID))
+		user, err = receiver.userStore.Query(ctx, store.Where("id", req.ID))
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf("user %d not found", req.ID)
@@ -299,7 +301,7 @@ func (reveive *UserService) updateUser(ctx context.Context, user *model.User, re
 		user.Avatar = req.UserUpdateSelfRequest.Avatar
 		user.Mobile = req.UserUpdateSelfRequest.Mobile
 		if req.Password != "" {
-			hashedPassword, err := reveive.hashPassword(req.Password)
+			hashedPassword, err := receiver.hashPassword(req.Password)
 			if err != nil {
 				return err
 			}
@@ -310,22 +312,22 @@ func (reveive *UserService) updateUser(ctx context.Context, user *model.User, re
 	if req.Status != 0 {
 		user.Status = &req.Status
 	}
-	return reveive.userStore.Update(ctx, user)
+	return receiver.userStore.Update(ctx, user)
 }
 
-func (reveive *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRoleRequest) error {
+func (receiver *UserService) updateRole(ctx context.Context, req *apitypes.UserUpdateRoleRequest) error {
 	var (
 		total int64
 		err   error
 		roles []*model.Role
 	)
 	req.RolesID = helper.RemoveDuplicates(req.RolesID)
-	user, err := reveive.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
+	user, err := receiver.userStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
 	if err != nil {
 		return err
 	}
 
-	total, roles, err = reveive.roleStore.List(ctx, 0, 0, "", "", store.In("id", req.RolesID))
+	total, roles, err = receiver.roleStore.List(ctx, 0, 0, "", "", store.In("id", req.RolesID))
 	if err != nil {
 		return err
 	}
@@ -334,12 +336,12 @@ func (reveive *UserService) updateRole(ctx context.Context, req *apitypes.UserUp
 		return err
 	}
 
-	if err := reveive.userStore.ReplaceAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
+	if err := receiver.userStore.ReplaceAssociation(ctx, user, model.PreloadRoles, roles); err != nil {
 		return err
 	}
 
 	// 如果redis缓存中存在该用户的角色，需要删除
-	cacheRoles, err := reveive.cacheStore.GetSet(ctx, store.RoleType, user.ID)
+	cacheRoles, err := receiver.cacheStore.GetSet(ctx, store.RoleType, user.ID)
 	if err != nil {
 		return err
 	}
@@ -349,7 +351,7 @@ func (reveive *UserService) updateRole(ctx context.Context, req *apitypes.UserUp
 		return nil
 	}
 
-	if err := reveive.cacheStore.DelKey(ctx, store.RoleType, user.ID); err != nil {
+	if err := receiver.cacheStore.DelKey(ctx, store.RoleType, user.ID); err != nil {
 		return err
 	}
 
@@ -360,35 +362,35 @@ func (reveive *UserService) updateRole(ctx context.Context, req *apitypes.UserUp
 
 	defer func() {
 		time.Sleep(time.Second * 5)
-		if err := reveive.cacheStore.DelKey(ctx, store.RoleType, user.ID); err != nil {
+		if err := receiver.cacheStore.DelKey(ctx, store.RoleType, user.ID); err != nil {
 			log.WithRequestID(ctx).Error("del role cache error", zap.Int64("userID", user.ID), zap.Any("roleNames", roleNames), zap.Error(err))
 		}
 	}()
 
-	return reveive.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil)
+	return receiver.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil)
 }
 
 // hashPassword 对密码进行 Bcrypt 哈希
-func (reveive *UserService) hashPassword(password string) (string, error) {
+func (receiver *UserService) hashPassword(password string) (string, error) {
 	// bcrypt.DefaultCost 是一个合理的默认值，如果需要更高的安全性可以增加
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return "", errors.New("failed to hash password")
+		return "", err
 	}
 	return string(hashedPassword), nil
 }
 
 // checkPasswordHash 验证明文密码是否与哈希密码匹配
-func (reveive *UserService) checkPasswordHash(password, hash string) bool {
+func (receiver *UserService) checkPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil // 如果没有错误，则匹配成功
 }
 
-func (reveive *UserService) OAuthLogin(provider, state string) (string, error) {
-	return reveive.oauth.Redirect(state, provider), nil
+func (receiver *UserService) OAuth2Login(provider, state string) (string, error) {
+	return receiver.oauth.Redirect(state, provider), nil
 }
 
-func (reveive *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error) {
+func (receiver *UserService) OAuth2Callback(ctx context.Context, req *apitypes.OAuthLoginRequest) (*apitypes.UserLoginResponse, error) {
 	var (
 		userID   int64
 		userName string
@@ -400,19 +402,19 @@ func (reveive *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAu
 		return nil, errors.New("invalid provider")
 	}
 
-	oauthToken, err := reveive.oauth.Auth(ctx, req.Code, provider)
+	oauthToken, err := receiver.oauth.Auth(ctx, req.Code, provider)
 	if err != nil {
 		return nil, err
 	}
 
-	userInfo, err := reveive.oauth.UserInfo(ctx, oauthToken, provider)
+	userInfo, err := receiver.oauth.UserInfo(ctx, oauthToken, provider)
 	if err != nil {
 		return nil, err
 	}
 
 	switch v := userInfo.(type) {
 	case *model.FeiShuUser:
-		feishuUser, err := reveive.feishuLogin(ctx, v)
+		feishuUser, err := receiver.feishuLogin(ctx, v)
 		if err != nil {
 			return nil, err
 		}
@@ -429,7 +431,7 @@ func (reveive *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAu
 		}
 
 	case *model.KeycloakUser:
-		u, err := reveive.genericLogin(ctx, v)
+		u, err := receiver.genericLogin(ctx, v)
 		if err != nil {
 			return nil, err
 		}
@@ -445,13 +447,13 @@ func (reveive *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAu
 		}
 	}
 
-	token, err := reveive.jwt.GenerateToken(userID, userName)
+	token, err := receiver.jwt.GenerateToken(userID, userName)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(roles) == 0 {
-		if err := reveive.cacheStore.SetSet(ctx, store.RoleType, userID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
+		if err := receiver.cacheStore.SetSet(ctx, store.RoleType, userID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
 			log.WithRequestID(ctx).Error("login set empty role cache error", zap.Int64("userID", userID), zap.Error(err))
 		}
 
@@ -465,7 +467,7 @@ func (reveive *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAu
 	for _, role := range roles {
 		roleNames = append(roleNames, role.Name)
 	}
-	if err := reveive.cacheStore.SetSet(ctx, store.RoleType, userID, roleNames, nil); err != nil {
+	if err := receiver.cacheStore.SetSet(ctx, store.RoleType, userID, roleNames, nil); err != nil {
 		log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", userID), zap.Any("roles", roleNames), zap.Error(err))
 	}
 
@@ -475,7 +477,7 @@ func (reveive *UserService) OAuthCallback(ctx context.Context, req *apitypes.OAu
 	}, nil
 }
 
-func (reveive *UserService) feishuLogin(ctx context.Context, userInfo *model.FeiShuUser) (data *model.FeiShuUser, err error) {
+func (receiver *UserService) feishuLogin(ctx context.Context, userInfo *model.FeiShuUser) (data *model.FeiShuUser, err error) {
 	if userInfo.UserID == "" {
 		return nil, errors.New("feishu user is empty")
 	}
@@ -486,7 +488,7 @@ func (reveive *UserService) feishuLogin(ctx context.Context, userInfo *model.Fei
 		email = userInfo.Email
 	}
 
-	feishuUser, err := reveive.feishuUserStore.Query(ctx, store.Where("user_id", userInfo.UserID), store.Preload("User.Roles"))
+	feishuUser, err := receiver.feishuUserStore.Query(ctx, store.Where("user_id", userInfo.UserID), store.Preload("User.Roles"))
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
@@ -501,7 +503,7 @@ func (reveive *UserService) feishuLogin(ctx context.Context, userInfo *model.Fei
 			Email:    email,
 		}
 
-		if err := reveive.feishuUserStore.Create(ctx, userInfo); err != nil {
+		if err := receiver.feishuUserStore.Create(ctx, userInfo); err != nil {
 			return nil, err
 		}
 		feishuUser = userInfo
@@ -510,12 +512,12 @@ func (reveive *UserService) feishuLogin(ctx context.Context, userInfo *model.Fei
 	return feishuUser, nil
 }
 
-func (reveive *UserService) genericLogin(ctx context.Context, userInfo *model.KeycloakUser) (data *model.User, err error) {
+func (receiver *UserService) genericLogin(ctx context.Context, userInfo *model.KeycloakUser) (data *model.User, err error) {
 	if userInfo.Sub == "" {
 		return nil, errors.New("generic user is empty")
 	}
 
-	data, err = reveive.userStore.Query(ctx, store.Where("email", userInfo.Email), store.Preload("Roles"))
+	data, err = receiver.userStore.Query(ctx, store.Where("email", userInfo.Email), store.Preload("Roles"))
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
@@ -529,13 +531,13 @@ func (reveive *UserService) genericLogin(ctx context.Context, userInfo *model.Ke
 			Department: strings.Join(userInfo.Group, ","),
 		}
 		if len(userInfo.Roles) > 0 {
-			_, roles, err := reveive.roleStore.List(ctx, 0, 0, "", "", store.In("name", userInfo.Roles))
+			_, roles, err := receiver.roleStore.List(ctx, 0, 0, "", "", store.In("name", userInfo.Roles))
 			if err != nil {
 				return nil, err
 			}
 			data.Roles = roles
 		}
-		if err := reveive.userStore.Create(ctx, data); err != nil {
+		if err := receiver.userStore.Create(ctx, data); err != nil {
 			return nil, err
 		}
 	}
@@ -543,8 +545,8 @@ func (reveive *UserService) genericLogin(ctx context.Context, userInfo *model.Ke
 	return data, nil
 }
 
-func (reveive *UserService) OAuth2Provider(_ context.Context) ([]string, error) {
-	data, err := reveive.localCache.GetCache(constant.OAuth2ProviderList)
+func (receiver *UserService) OAuth2Provider(_ context.Context) ([]string, error) {
+	data, err := receiver.localCache.GetCache(constant.OAuth2ProviderList)
 	if err != nil {
 		return nil, err
 	}
@@ -552,5 +554,32 @@ func (reveive *UserService) OAuth2Provider(_ context.Context) ([]string, error) 
 	if !ok {
 		return nil, errors.New("get oauth2 provider list error")
 	}
+	sort.Strings(list)
 	return list, nil
+}
+
+func (receiver *UserService) OAuth2Activate(ctx context.Context, req *apitypes.OAuthActivateRequest) (*apitypes.UserLoginResponse, error) {
+	if req.Password != req.ConfirmPassword {
+		return nil, errors.New("password not match")
+	}
+
+	user, err := receiver.userStore.Query(ctx, store.Where("id", req.ID))
+	if err != nil {
+		return nil, err
+	}
+
+	password, err := receiver.hashPassword(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("hash password error: %v", err)
+	}
+	user.Password = password
+	user.Status = helper.Int(model.UserStatusActive)
+	if err := receiver.userStore.Update(ctx, user); err != nil {
+		return nil, fmt.Errorf("update user error: %v", err)
+	}
+	token, err := receiver.jwt.GenerateToken(user.ID, user.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &apitypes.UserLoginResponse{User: user, Token: token}, nil
 }
