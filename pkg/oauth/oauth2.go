@@ -101,22 +101,28 @@ func (f *OAuth2) UserInfo(ctx context.Context, token *oauth2.Token, provider str
 	if err != nil {
 		return nil, err
 	}
-	var kcUser model.KeycloakUser
-	if err := json.Unmarshal(body, &kcUser); err == nil && kcUser.Sub != "" {
-		return &kcUser, nil
-	}
 
-	var res helper.HttpResponse
-	if err := json.Unmarshal(body, &res); err != nil {
-		return nil, err
+	switch provider {
+	case "keycloak":
+		var kcUser model.KeycloakUser
+		if err := json.Unmarshal(body, &kcUser); err == nil && kcUser.Sub != "" {
+			return &kcUser, nil
+		}
+	case "feishu":
+		var res helper.HttpResponse
+		if err := json.Unmarshal(body, &res); err != nil {
+			return nil, err
+		}
+		if res.Code != 0 {
+			return nil, errors.New(res.Msg)
+		}
+		feishuUser, err := helper.UnmarshalData[model.FeiShuUser](res.Data)
+		if err != nil {
+			return nil, err
+		}
+		return feishuUser, nil
+	default:
+		return nil, fmt.Errorf("provider %s not supported", provider)
 	}
-	if res.Code != 0 {
-		return nil, errors.New(res.Msg)
-	}
-
-	feishuUser, err := helper.UnmarshalData[model.FeiShuUser](res.Data)
-	if err != nil {
-		return nil, err
-	}
-	return feishuUser, nil
+	return nil, nil
 }

@@ -26,6 +26,8 @@ func NewInitCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			logger, _ := zap.NewProduction()
+			zap.ReplaceGlobals(logger)
 			cf := viper.GetString(constant.FlagConfigPath)
 			if cf == "" {
 				zap.L().Fatal("config file path is empty")
@@ -34,6 +36,7 @@ func NewInitCmd() *cobra.Command {
 			if err != nil {
 				zap.L().Fatal("load config file faild", zap.String("path", cf), zap.Error(err))
 			}
+
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return initApplication(cmd, args)

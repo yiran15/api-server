@@ -1,11 +1,10 @@
 server:
   bind: 0.0.0.0:8080
-
+  timeZone: "Asia/Shanghai"
 log:
-  # 日志级别 debug info
   level: debug
-
 mysql:
+  # 开启后会打印 sql 语句
   debug: true
   username: xxx
   password: xxx
@@ -15,45 +14,46 @@ mysql:
   maxIdleConns: 10
   maxOpenConns: 20
   maxLifetime: 30m
-
-# redis配置
 redis:
   # single sentinel
   mode: single
   host: 127.0.0.1:6379
-  password: xxx
+  password: 123456
   # 过期时间 3s 3m 3h
   expireTime: 300s
-  keyPrefix: xxx
+  # redis key 前缀
+  keyPrefix: tutu
   db: 0
   poolSize: 20
   minIdleConns: 10
   connMaxLifetime: 30m
-
 jwt:
-  issuer: api-server
-  secret: qwer123
+  issuer: tutu
+  secret: 123456
   expireTime: 9999h
-
 oauth2:
+  # 是否启用 oauth2
   enable: true
-  name: feishu
-  clientId: xxx
-  clientSecret: xxx
-  authUrl: https://accounts.feishu.cn/open-apis/authen/v1/authorize
-  tokenUrl: https://open.feishu.cn/open-apis/authen/v2/oauth/token
-  userInfoUrl: https://open.feishu.cn/open-apis/authen/v1/user_info
-  redirectUrl: http://10.0.0.10:8080/oauth/callback
-
-  # name: keycolak
-  # clientId: xxx
-  # clientSecret: xxx
-  # scopes:
-  # - openid
-  # - email
-  # - profile
-  # - roles
-  # authUrl: https://keycloak.qqlx.net/realms/qqlx/protocol/openid-connect/auth
-  # tokenUrl: https://keycloak.qqlx.net/realms/qqlx/protocol/openid-connect/token
-  # userInfoUrl: https://keycloak.qqlx.net/realms/qqlx/protocol/openid-connect/userinfo
-  # redirectUrl: http://10.0.0.10:8080/oauth/callback
+  providers:
+    feishu:
+      clientId: xxx
+      clientSecret: xxx
+      # scopes: []
+      authUrl: https://accounts.feishu.cn/open-apis/authen/v1/authorize
+      tokenUrl: https://open.feishu.cn/open-apis/authen/v2/oauth/token
+      userInfoUrl: https://open.feishu.cn/open-apis/authen/v1/user_info
+      # 回调地址, host 为前端地址
+      redirectUrl: http://10.0.0.10:5173/oauth/login
+    keycloak:
+      clientId: xxx
+      clientSecret: xxx
+      scopes:
+        - openid
+        - email
+        - profile
+        - roles
+      authUrl: https://keycloak.qqlx.net/realms/qqlx/protocol/openid-connect/auth
+      tokenUrl: https://keycloak.qqlx.net/realms/qqlx/protocol/openid-connect/token
+      userInfoUrl: https://keycloak.qqlx.net/realms/qqlx/protocol/openid-connect/userinfo
+      # 回调地址, host 为前端地址
+      redirectUrl: http://10.0.0.10:5173/oauth/login

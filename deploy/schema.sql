@@ -70,29 +70,27 @@ CREATE TABLE `casbin_rule`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --- feishu_user
--- auto-generated definition
-create table feishu_users
+CREATE TABLE `feishu_users`
 (
     uid              bigint auto_increment comment '关联users表中的用户id'
         primary key,
     created_at       datetime(3)       null,
     updated_at       datetime(3)       null,
     deleted_at       datetime(3)       null,
-    avatar_big       longtext          null comment '飞书用户avatar_big',
-    avatar_middle    longtext          null comment '飞书用户avatar_middle',
-    avatar_thumb     longtext          null comment '飞书用户avatar_thumb',
-    avatar_url       longtext          null comment '飞书用户avatar_url',
-    email            longtext          null comment '飞书用户email',
-    employee_no      longtext          null comment '飞书用户employee_no',
-    en_name          longtext          null comment '飞书用户en_name',
-    enterprise_email longtext          null comment '飞书用户enterprise_email',
-    mobile           longtext          null comment '飞书用户mobile',
-    name             longtext          null comment '飞书用户name',
-    open_id          longtext          null comment '飞书用户open_id',
-    tenant_key       longtext          null comment '飞书用户tenant_key',
-    union_id         longtext          null comment '飞书用户union_id',
-    user_id          varchar(191)      null comment '飞书用户ID'
+    avatar_big       varchar(255)      null comment '飞书用户avatar_big',
+    avatar_middle    varchar(255)      null comment '飞书用户avatar_middle',
+    avatar_thumb     varchar(255)      null comment '飞书用户avatar_thumb',
+    avatar_url       varchar(255)      null comment '飞书用户avatar_url',
+    email            varchar(255)      null comment '飞书用户email',
+    employee_no      varchar(255)      null comment '飞书用户employee_no',
+    en_name          varchar(255)      null comment '飞书用户en_name',
+    enterprise_email varchar(255)      null comment '飞书用户enterprise_email',
+    mobile           varchar(255)      null comment '飞书用户mobile',
+    name             varchar(255)      null comment '飞书用户name',
+    open_id          varchar(255)      null comment '飞书用户open_id',
+    tenant_key       varchar(255)      null comment '飞书用户tenant_key',
+    union_id         varchar(255)      null comment '飞书用户union_id',
+    user_id          varchar(255)      null comment '飞书用户ID'
 );
 
-create index idx_feishu_users_deleted_at
-    on feishu_users (deleted_at);
+CREATE INDEX `idx_feishu_users_deleted_at` ON `feishu_users` (`deleted_at`);
