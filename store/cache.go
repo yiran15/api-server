@@ -25,6 +25,7 @@ type CacheType string
 
 const (
 	RoleType CacheType = "role"
+	TestType CacheType = "test"
 )
 
 type CacheStore struct {

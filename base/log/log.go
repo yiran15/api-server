@@ -2,7 +2,9 @@ package log
 
 import (
 	"context"
+	golog "log"
 	"os"
+	"time"
 
 	"github.com/yiran15/api-server/base/conf"
 	"github.com/yiran15/api-server/base/helper"
@@ -17,18 +19,28 @@ func NewLogger() {
 		writer   zapcore.WriteSyncer
 		logLevel zapcore.Level
 	)
-	logLevelStr := conf.GetServerLogLevel()
+	logLevelStr := conf.GetLogLevel()
+	timeZone := conf.GetServerTimeZone()
+	cst, err := time.LoadLocation(timeZone)
+	if err != nil {
+		golog.Printf("failed to load location %s: %v, use local time instead", timeZone, err)
+		cst = time.Local
+	}
+
 	config := zapcore.EncoderConfig{
-		TimeKey:       "time",
-		LevelKey:      "level",
-		NameKey:       "logger",
-		CallerKey:     "caller",
-		MessageKey:    "msg",
-		StacktraceKey: "stacktrace",
-		LineEnding:    zapcore.DefaultLineEnding,
-		EncodeLevel:   zapcore.CapitalLevelEncoder,
-		EncodeTime:    zapcore.ISO8601TimeEncoder,
-		EncodeCaller:  zapcore.ShortCallerEncoder,
+		TimeKey:        "time",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.CapitalLevelEncoder,
+		EncodeTime: func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+			enc.AppendString(t.In(cst).Format(time.RFC3339))
+		},
+		EncodeCaller: zapcore.ShortCallerEncoder,
 	}
 	encoder = zapcore.NewJSONEncoder(config)
 	writer = zapcore.AddSync(os.Stderr)
@@ -44,13 +56,11 @@ func NewLogger() {
 	core := zapcore.NewCore(encoder, writer, logLevel)
 	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.FatalLevel))
 	zap.ReplaceGlobals(logger)
-	if logLevel == zap.DebugLevel {
-		zap.L().Debug("log initialization successful", zap.String("level", logLevelStr))
-	}
+	zap.L().Info("log initialization successful", zap.String("level", logLevelStr))
 }
 
 func WithRequestID(ctx context.Context) *zap.Logger {
-	return zap.L().With(zap.String("request_id", helper.GetRequestIDFromContext(ctx)))
+	return zap.L().With(zap.String("request-id", helper.GetRequestIDFromContext(ctx)))
 }
 
 func WithBody(ctx context.Context, body any) *zap.Logger {

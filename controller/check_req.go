@@ -44,8 +44,8 @@ func NewValidator() error {
 	return nil
 }
 
-func (receive *Validator) CheckReq(ctx context.Context, value any) (errMsg string, err error) {
-	err = receive.validate.Struct(value)
+func (receiver *Validator) CheckReq(ctx context.Context, value any) (errMsg string, err error) {
+	err = receiver.validate.Struct(value)
 	if err == nil {
 		return "", nil
 	}

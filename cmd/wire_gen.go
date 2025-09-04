@@ -15,7 +15,9 @@ import (
 	"github.com/yiran15/api-server/controller"
 	"github.com/yiran15/api-server/pkg/casbin"
 	"github.com/yiran15/api-server/pkg/jwt"
-	"github.com/yiran15/api-server/service/v1"
+	localcache "github.com/yiran15/api-server/pkg/local_cache"
+	"github.com/yiran15/api-server/pkg/oauth"
+	v1 "github.com/yiran15/api-server/service/v1"
 	"github.com/yiran15/api-server/store"
 )
 
@@ -46,7 +48,15 @@ func InitApplication() (*app.Application, func(), error) {
 		cleanup()
 		return nil, nil, err
 	}
-	userServicer := v1.NewUserService(userStorer, roleStorer, cacheStore, txManager, generateToken)
+	oAuth2, err := oauth.NewOAuth2()
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	feiShuUserStorer := store.NewFeiShuUserStore(dbProvider)
+	cacher := localcache.NewCacher(oAuth2)
+	userServicer := v1.NewUserService(userStorer, roleStorer, cacheStore, txManager, generateToken, oAuth2, feiShuUserStorer, cacher)
 	userController := controller.NewUserController(userServicer)
 	apiStorer := store.NewApiStore(dbProvider)
 	casbinStorer := store.NewCasbinStore(dbProvider)

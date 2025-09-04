@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
 	"github.com/yiran15/api-server/base/apitypes"
 	"github.com/yiran15/api-server/base/constant"
@@ -46,9 +47,9 @@ func (m *Middleware) Auth() gin.HandlerFunc {
 func (m *Middleware) Abort(c *gin.Context, code int, err error) {
 	switch code {
 	case http.StatusUnauthorized:
-		c.JSON(code, apitypes.NewResponse(code, fmt.Sprintf("unauthorized, %v", err), c.GetString(constant.RequestIDContextKey), nil))
+		c.JSON(code, apitypes.NewResponse(code, fmt.Sprintf("unauthorized, %v", err), requestid.Get(c), nil))
 	case http.StatusForbidden:
-		c.JSON(code, apitypes.NewResponse(code, fmt.Sprintf("forbidden, %v", err), c.GetString(constant.RequestIDContextKey), nil))
+		c.JSON(code, apitypes.NewResponse(code, fmt.Sprintf("forbidden, %v", err), requestid.Get(c), nil))
 	}
 	c.Error(err)
 	c.Abort()

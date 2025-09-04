@@ -10,9 +10,7 @@ import (
 type MiddlewareInterface interface {
 	Auth() gin.HandlerFunc
 	AuthZ() gin.HandlerFunc
-	RequestID() gin.HandlerFunc
-	ZapLogger() gin.HandlerFunc
-	Cors(option CorsOption, allowedOrigins ...string) gin.HandlerFunc
+	Session() gin.HandlerFunc
 }
 
 type Middleware struct {

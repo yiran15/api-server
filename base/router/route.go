@@ -1,12 +1,21 @@
 package router
 
 import (
+	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/requestid"
+
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	_ "github.com/joho/godotenv/autoload"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/yiran15/api-server/base/middleware"
 	"github.com/yiran15/api-server/controller"
 	_ "github.com/yiran15/api-server/docs"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type RouterInterface interface {
@@ -34,9 +43,30 @@ func NewRouter(
 }
 
 func (r *Router) RegisterRouter(engine *gin.Engine) {
-	engine.Use(r.middleware.ZapLogger(), r.middleware.Cors(middleware.CorsAllowAll), r.middleware.RequestID())
+	engine.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+	engine.Use(ginzap.GinzapWithConfig(zap.L(), &ginzap.Config{
+		Context: ginzap.Fn(func(c *gin.Context) []zapcore.Field {
+			fields := []zapcore.Field{}
+			if requestID := requestid.Get(c); requestID != "" {
+				fields = append(fields, zap.String("request-id", requestID))
+			}
+			return fields
+		}),
+	}))
+
+	engine.Use(ginzap.RecoveryWithZap(zap.L(), true))
+	engine.Use(requestid.New())
+
 	apiGroup := engine.Group("/api/v1")
 	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.registerOAuthRouter(apiGroup)
 	r.registerUserRouter(apiGroup)
 	r.registerRoleRouter(apiGroup)
 	r.registerApiRouter(apiGroup)
@@ -45,17 +75,17 @@ func (r *Router) RegisterRouter(engine *gin.Engine) {
 func (r *Router) registerUserRouter(apiGroup *gin.RouterGroup) {
 	userGroup := apiGroup.Group("/user")
 	{
-		userGroup.POST("/login", r.userRouter.UserLogin)
+		userGroup.POST("/login", r.userRouter.UserLoginController)
 		userGroup.Use(r.middleware.Auth())
-		userGroup.POST("/logout", r.userRouter.UserLogout)
-		userGroup.GET("/info", r.userRouter.UserInfo)
-		userGroup.PUT("/self", r.userRouter.UserUpdateBySelf)
+		userGroup.POST("/logout", r.userRouter.UserLogoutController)
+		userGroup.GET("/info", r.userRouter.UserInfoController)
+		userGroup.PUT("/self", r.userRouter.UserUpdateBySelfController)
 		userGroup.Use(r.middleware.AuthZ())
-		userGroup.POST("/register", r.userRouter.UserCreate)
-		userGroup.PUT("/:id", r.userRouter.UserUpdateByAdmin)
-		userGroup.GET("/:id", r.userRouter.UserQuery)
-		userGroup.GET("", r.userRouter.UserList)
-		userGroup.DELETE("/:id", r.userRouter.UserDelete)
+		userGroup.POST("/register", r.userRouter.UserCreateController)
+		userGroup.PUT("/:id", r.userRouter.UserUpdateByAdminController)
+		userGroup.GET("/:id", r.userRouter.UserQueryController)
+		userGroup.GET("", r.userRouter.UserListController)
+		userGroup.DELETE("/:id", r.userRouter.UserDeleteController)
 	}
 }
 
@@ -69,7 +99,6 @@ func (r *Router) registerRoleRouter(apiGroup *gin.RouterGroup) {
 		roleGroup.GET("/:id", r.roleRouter.QueryRole)
 		roleGroup.GET("", r.roleRouter.ListRole)
 	}
-
 }
 
 func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {
@@ -83,5 +112,16 @@ func (r *Router) registerApiRouter(apiGroup *gin.RouterGroup) {
 		baseGroup.GET("/:id", r.apiRouter.QueryApi)
 		baseGroup.GET("", r.apiRouter.ListApi)
 
+	}
+}
+
+func (r *Router) registerOAuthRouter(apiGroup *gin.RouterGroup) {
+	oauthGroup := apiGroup.Group("/oauth2")
+	oauthGroup.Use(r.middleware.Session())
+	{
+		oauthGroup.GET("/provider", r.userRouter.OAuth2ProviderController)
+		oauthGroup.GET("/login", r.userRouter.OAuth2LoginController)
+		oauthGroup.GET("/callback", r.userRouter.OAuth2CallbackController)
+		oauthGroup.POST("/:id", r.userRouter.OAuth2ActivateController)
 	}
 }

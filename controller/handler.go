@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
 	"github.com/yiran15/api-server/base/apitypes"
@@ -56,6 +57,13 @@ func bindWithSources(c *gin.Context, req any, sources ...bindType) (success bool
 		responseParamError(c, errors.New("parameter error"), errMsg)
 		return false
 	}
+
+	requestID := requestid.Get(c)
+	if requestID != "" {
+		ctx := context.WithValue(c.Request.Context(), constant.RequestIDContextKey, requestID)
+		c.Request = c.Request.WithContext(ctx)
+	}
+
 	return true
 }
 
@@ -122,16 +130,16 @@ func ResponseNoBind(c *gin.Context, handler HandlerErrNoBind) {
 
 func responseError(c *gin.Context, err error) {
 	code, err := getErr(err)
-	c.JSON(code, apitypes.NewResponse(code, err.Error(), c.GetString(constant.RequestIDContextKey), nil))
+	c.JSON(code, apitypes.NewResponse(code, err.Error(), requestid.Get(c), nil))
 	_ = c.Error(err)
 }
 
 func responseSuccess(c *gin.Context, data any) {
-	c.JSON(http.StatusOK, apitypes.NewResponse(0, "success", c.GetString(constant.RequestIDContextKey), data))
+	c.JSON(http.StatusOK, apitypes.NewResponse(0, "success", requestid.Get(c), data))
 }
 
 func responseParamError(c *gin.Context, err error, errMsg string) {
-	c.JSON(http.StatusBadRequest, apitypes.NewResponse(http.StatusBadRequest, "parameter error", c.GetString(constant.RequestIDContextKey), errMsg))
+	c.JSON(http.StatusBadRequest, apitypes.NewResponse(http.StatusBadRequest, "parameter error", requestid.Get(c), errMsg))
 	_ = c.Error(err)
 }
 
