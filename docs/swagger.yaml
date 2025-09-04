@@ -1,13 +1,4 @@
 definitions:
-  apitypes.Api:
-    properties:
-      handler:
-        type: string
-      method:
-        type: string
-      path:
-        type: string
-    type: object
   apitypes.ApiCreateRequest:
     properties:
       description:
@@ -28,6 +19,15 @@ definitions:
     - method
     - name
     - path
+    type: object
+  apitypes.ApiInfo:
+    properties:
+      handler:
+        type: string
+      method:
+        type: string
+      path:
+        type: string
     type: object
   apitypes.ApiListResponse:
     properties:
@@ -57,6 +57,21 @@ definitions:
         type: integer
     required:
     - id
+    type: object
+  apitypes.OAuthActivateRequest:
+    properties:
+      confirmPassword:
+        minLength: 8
+        type: string
+      id:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - confirmPassword
+    - id
+    - password
     type: object
   apitypes.Response:
     properties:
@@ -106,6 +121,19 @@ definitions:
         type: integer
     required:
     - id
+    type: object
+  apitypes.ServerApiData:
+    properties:
+      apiInfo:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/apitypes.ApiInfo'
+          type: array
+        type: object
+      apiType:
+        items:
+          type: string
+        type: array
     type: object
   apitypes.UserCreateRequest:
     properties:
@@ -289,28 +317,6 @@ info:
   title: Swagger API
   version: "1.0"
 paths:
-  /api/v1/allApi:
-    get:
-      consumes:
-      - application/json
-      description: 获取所有api
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 查询成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/apitypes.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/apitypes.Api'
-                  type: array
-              type: object
-      summary: 获取所有api
-      tags:
-      - API管理
   /api/v1/api:
     post:
       consumes:
@@ -459,6 +465,115 @@ paths:
       summary: 更新 API
       tags:
       - API管理
+  /api/v1/api/serverApi:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有api
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/apitypes.ServerApiData'
+              type: object
+      summary: 获取所有api
+      tags:
+      - API管理
+  /api/v1/oauth2/:id:
+    post:
+      consumes:
+      - application/json
+      description: 使用 OAuth2 激活，返回用户信息和 Token
+      parameters:
+      - description: 激活请求参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/apitypes.OAuthActivateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 激活成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/apitypes.UserLoginResponse'
+              type: object
+      summary: OAuth2 激活
+      tags:
+      - 用户管理
+  /api/v1/oauth2/callback:
+    get:
+      consumes:
+      - application/json
+      description: 使用 OAuth 回调，返回用户信息和 Token
+      parameters:
+      - in: query
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/apitypes.UserLoginResponse'
+              type: object
+      summary: OAuth 回调
+      tags:
+      - 用户管理
+  /api/v1/oauth2/login:
+    get:
+      consumes:
+      - application/json
+      description: 使用 OAuth 登录，返回用户信息和 Token
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: 重定向到 OAuth 登录页面
+          schema:
+            type: string
+      summary: OAuth 登录
+      tags:
+      - 用户管理
+  /api/v1/oauth2/provider:
+    get:
+      consumes:
+      - application/json
+      description: 获取 OAuth2 提供商列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/apitypes.Response'
+            - properties:
+                data:
+                  items:
+                    type: string
+                  type: array
+              type: object
+      summary: OAuth2 提供商列表
+      tags:
+      - 用户管理
   /api/v1/role:
     post:
       consumes:
