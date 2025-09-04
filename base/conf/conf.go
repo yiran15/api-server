@@ -11,14 +11,15 @@ import (
 )
 
 const (
-	defaultLoglevel               = "info"
-	defaultServerBind             = "0.0.0.0:8080"
-	defaultJwtIssuer              = "api-server"
-	defaultJwtExpireTime          = "1h"
-	defaultLoadCasbinTimeDuration = 5 * time.Second
-	defaultRedisExpireTime        = "30s"
+	defaultLoglevel        = "info"
+	defaultServerBind      = "0.0.0.0:8080"
+	defaultServerTimeZone  = "Asia/Shanghai"
+	defaultJwtIssuer       = "api-server"
+	defaultJwtExpireTime   = "1h"
+	defaultRedisExpireTime = "1h"
 )
 
+// 加载配置
 func LoadConfig(configPath string) (err error) {
 	_, err = os.Stat(configPath)
 	if os.IsNotExist(err) {
@@ -36,23 +37,15 @@ func LoadConfig(configPath string) (err error) {
 	if err = viper.ReadInConfig(); err != nil {
 		return fmt.Errorf("reading configuration files %s faild. err: %w", configPath, err)
 	}
-	zap.S().Info("configuration file read successfully")
 	return nil
 }
 
-func GetServerCompress() bool {
-	compress := viper.GetBool("server.compress")
-	return compress
+// 获取全部配置
+func AllConfig() map[string]any {
+	return viper.AllSettings()
 }
 
-func GetServerLogLevel() string {
-	logLevel := viper.GetString("server.logLevel")
-	if logLevel == "" {
-		logLevel = defaultLoglevel
-	}
-	return logLevel
-}
-
+// 服务配置
 func GetServerBind() string {
 	bind := viper.GetString("server.bind")
 	if bind == "" {
@@ -61,22 +54,24 @@ func GetServerBind() string {
 	return bind
 }
 
-func GetServerSalt() (string, error) {
-	salt := viper.GetString("server.salt")
-	if salt == "" {
-		return "", fmt.Errorf("server.salt is empty")
+func GetServerTimeZone() string {
+	timeZone := viper.GetString("server.timeZone")
+	if timeZone == "" {
+		timeZone = defaultServerTimeZone
 	}
-	return salt, nil
+	return timeZone
 }
 
-func GetServerAutoLoadCasbinRule() time.Duration {
-	duration := viper.GetDuration("server.autoLoadCasbinRule")
-	if duration == 0 {
-		return defaultLoadCasbinTimeDuration
+// 日志配置
+func GetLogLevel() string {
+	logLevel := viper.GetString("log.level")
+	if logLevel == "" {
+		logLevel = defaultLoglevel
 	}
-	return duration
+	return logLevel
 }
 
+// jwt 配置
 func GetJwtSecret() (string, error) {
 	secret := viper.GetString("jwt.secret")
 	if secret == "" {
@@ -106,6 +101,7 @@ func GetJwtExpirationTime() (time.Duration, error) {
 	return expireTime, nil
 }
 
+// mysql 配置
 func GetMysqlDsn() (dsn string, err error) {
 	user := viper.GetString("mysql.username")
 	if user == "" {
@@ -156,6 +152,7 @@ func GetMysqlMaxLifetime() time.Duration {
 	return maxLifetime
 }
 
+// redis 配置
 func GetRedisPoolSize() int {
 	poolSize := viper.GetInt("redis.poolSize")
 	if poolSize == 0 {

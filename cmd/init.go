@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/yiran15/api-server/base/apitypes"
 	"github.com/yiran15/api-server/base/conf"
+	"github.com/yiran15/api-server/base/constant"
 	"github.com/yiran15/api-server/base/data"
 	"github.com/yiran15/api-server/model"
 	"github.com/yiran15/api-server/pkg/casbin"
@@ -25,7 +26,9 @@ func NewInitCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			cf := viper.GetString(FlagConfigPath)
+			logger, _ := zap.NewProduction()
+			zap.ReplaceGlobals(logger)
+			cf := viper.GetString(constant.FlagConfigPath)
 			if cf == "" {
 				zap.L().Fatal("config file path is empty")
 			}
@@ -33,6 +36,7 @@ func NewInitCmd() *cobra.Command {
 			if err != nil {
 				zap.L().Fatal("load config file faild", zap.String("path", cf), zap.Error(err))
 			}
+
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return initApplication(cmd, args)
@@ -82,7 +86,7 @@ func getService() (*service, func(), error) {
 	}
 	casbinManager := casbin.NewCasbinManager(casbinEnforcer)
 
-	userServicer := v1.NewUserService(userRepo, roleRepo, cacheStore, txManager, generateToken)
+	userServicer := v1.NewUserService(userRepo, roleRepo, cacheStore, txManager, generateToken, nil, nil, nil)
 	roleServicer := v1.NewRoleService(roleRepo, apiRepo, casbinStore, casbinManager, txManager)
 	apiServicer := v1.NewApiServicer(apiRepo)
 	return &service{

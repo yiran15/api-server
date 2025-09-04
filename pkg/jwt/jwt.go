@@ -3,6 +3,7 @@ package jwt
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	jwtv5 "github.com/golang-jwt/jwt/v5"
@@ -67,12 +68,10 @@ func newJwtClaims(userID int64, userName, issuer string, expire time.Duration) *
 
 func (j *GenerateToken) GenerateToken(id int64, userName string) (token string, err error) {
 	jwtClaims := newJwtClaims(id, userName, j.issuer, j.expire)
-
 	claims := jwtv5.NewWithClaims(jwtv5.SigningMethodHS256, jwtClaims)
-
 	token, err = claims.SignedString([]byte(j.secret))
 	if err != nil {
-		return "", errors.New("generate token failed")
+		return "", fmt.Errorf("generate token error: %v", err)
 	}
 	return token, nil
 }
@@ -84,22 +83,22 @@ func (j *GenerateToken) ParseToken(tokenString string) (jwtClaims *JwtClaims, er
 		return []byte(j.secret), nil
 	})
 	if err != nil {
-		return nil, errors.New("parse token failed")
+		return nil, fmt.Errorf("parse token error: %v", err)
 	}
 	if claims, ok := token.Claims.(*JwtClaims); ok {
 		return claims, nil
 	}
-	return nil, errors.New("parse token failed")
+	return nil, fmt.Errorf("parse token error: type not match")
 }
 
 func (j *GenerateToken) GetUser(ctx context.Context) (*JwtClaims, error) {
 	cl := ctx.Value(constant.UserContextKey)
 	if cl == nil {
-		return nil, errors.New("get jwt claims by ctx failed")
+		return nil, errors.New("get jwt claims by ctx empty")
 	}
 	jwtClaims, ok := cl.(*JwtClaims)
 	if !ok {
-		return nil, errors.New("get jwt claims by ctx failed")
+		return nil, errors.New("get jwt claims by type not match")
 	}
 	return jwtClaims, nil
 }

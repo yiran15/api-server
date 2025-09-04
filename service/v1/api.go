@@ -32,8 +32,8 @@ func NewApiServicer(apiStore store.ApiStorer) ApiServicer {
 	}
 }
 
-func (a *ApiService) CreateApi(ctx context.Context, req *apitypes.ApiCreateRequest) error {
-	if api, err := a.apiStore.Query(ctx, store.Where("name", req.Name)); err != nil {
+func (receiver *ApiService) CreateApi(ctx context.Context, req *apitypes.ApiCreateRequest) error {
+	if api, err := receiver.apiStore.Query(ctx, store.Where("name", req.Name)); err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
@@ -42,7 +42,7 @@ func (a *ApiService) CreateApi(ctx context.Context, req *apitypes.ApiCreateReque
 		}
 	}
 
-	return a.apiStore.Create(ctx, &model.Api{
+	return receiver.apiStore.Create(ctx, &model.Api{
 		Name:        req.Name,
 		Path:        req.Path,
 		Method:      req.Method,
@@ -50,17 +50,17 @@ func (a *ApiService) CreateApi(ctx context.Context, req *apitypes.ApiCreateReque
 	})
 }
 
-func (a *ApiService) UpdateApi(ctx context.Context, req *apitypes.ApiUpdateRequest) error {
-	api, err := a.apiStore.Query(ctx, store.Where("id", req.ID))
+func (receiver *ApiService) UpdateApi(ctx context.Context, req *apitypes.ApiUpdateRequest) error {
+	api, err := receiver.apiStore.Query(ctx, store.Where("id", req.ID))
 	if err != nil {
 		return err
 	}
 	api.Description = req.Description
-	return a.apiStore.Update(ctx, api)
+	return receiver.apiStore.Update(ctx, api)
 }
 
-func (a *ApiService) DeleteApi(ctx context.Context, req *apitypes.IDRequest) error {
-	api, err := a.apiStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
+func (receiver *ApiService) DeleteApi(ctx context.Context, req *apitypes.IDRequest) error {
+	api, err := receiver.apiStore.Query(ctx, store.Where("id", req.ID), store.Preload(model.PreloadRoles))
 	if err != nil {
 		return err
 	}
@@ -75,14 +75,14 @@ func (a *ApiService) DeleteApi(ctx context.Context, req *apitypes.IDRequest) err
 		return fmt.Errorf("api %s has roles %s", api.Name, rolesName)
 	}
 
-	return a.apiStore.Delete(ctx, api)
+	return receiver.apiStore.Delete(ctx, api)
 }
 
-func (a *ApiService) QueryApi(ctx context.Context, req *apitypes.IDRequest) (*model.Api, error) {
-	return a.apiStore.Query(ctx, store.Where("id", req.ID))
+func (receiver *ApiService) QueryApi(ctx context.Context, req *apitypes.IDRequest) (*model.Api, error) {
+	return receiver.apiStore.Query(ctx, store.Where("id", req.ID))
 }
 
-func (a *ApiService) ListApi(ctx context.Context, req *apitypes.ApiListRequest) (*apitypes.ApiListResponse, error) {
+func (receiver *ApiService) ListApi(ctx context.Context, req *apitypes.ApiListRequest) (*apitypes.ApiListResponse, error) {
 	var (
 		where store.Option
 		colum = "id"
@@ -102,7 +102,7 @@ func (a *ApiService) ListApi(ctx context.Context, req *apitypes.ApiListRequest) 
 		oder = req.Direction
 	}
 
-	total, apis, err := a.apiStore.List(ctx, req.Page, req.PageSize, colum, oder, where)
+	total, apis, err := receiver.apiStore.List(ctx, req.Page, req.PageSize, colum, oder, where)
 	if err != nil {
 		return nil, err
 	}

@@ -2,12 +2,10 @@ package store
 
 import (
 	"context"
-	"errors"
 
 	// 假设你的错误包路径
 	"github.com/yiran15/api-server/base/log"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 // repository 是 Repository 接口的 GORM 实现。
@@ -81,15 +79,10 @@ func (r *repository[T]) DeleteBatch(ctx context.Context, objs []*T, opts ...Opti
 }
 
 // Query 查询单个对象。
-// 如果未找到记录，则返回 apierr.NotFoundErr。
 func (r *repository[T]) Query(ctx context.Context, opts ...Option) (*T, error) {
-	model := new(T)                    // 创建一个 T 类型的零值实例，用于 GORM 的 First 方法
-	db := r.getDB(ctx, model, opts...) // 先应用所有查询选项
+	model := new(T)
+	db := r.getDB(ctx, model, opts...)
 	if err := db.First(model).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 返回更具体的未找到错误，便于上层业务逻辑区分
-			return nil, err
-		}
 		log.WithRequestID(ctx).Error("failed to query object", zap.Error(err))
 		return nil, err
 	}

@@ -8,44 +8,6 @@
     },
     "host": "10.0.0.10:8080",
     "paths": {
-        "/api/v1/allApi": {
-            "get": {
-                "description": "获取所有api",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "API管理"
-                ],
-                "summary": "获取所有api",
-                "responses": {
-                    "200": {
-                        "description": "查询成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/apitypes.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/apitypes.Api"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/api": {
             "post": {
                 "description": "创建 API",
@@ -275,6 +237,191 @@
                         "description": "删除成功",
                         "schema": {
                             "$ref": "#/definitions/apitypes.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/api/serverApi": {
+            "get": {
+                "description": "获取所有api",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "API管理"
+                ],
+                "summary": "获取所有api",
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apitypes.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/apitypes.ServerApiData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/oauth2/:id": {
+            "post": {
+                "description": "使用 OAuth2 激活，返回用户信息和 Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "OAuth2 激活",
+                "parameters": [
+                    {
+                        "description": "激活请求参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.OAuthActivateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "激活成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apitypes.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/apitypes.UserLoginResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/oauth2/callback": {
+            "get": {
+                "description": "使用 OAuth 回调，返回用户信息和 Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "OAuth 回调",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "登录成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apitypes.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/apitypes.UserLoginResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/oauth2/login": {
+            "get": {
+                "description": "使用 OAuth 登录，返回用户信息和 Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "OAuth 登录",
+                "responses": {
+                    "302": {
+                        "description": "重定向到 OAuth 登录页面",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/oauth2/provider": {
+            "get": {
+                "description": "获取 OAuth2 提供商列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户管理"
+                ],
+                "summary": "OAuth2 提供商列表",
+                "responses": {
+                    "200": {
+                        "description": "获取成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/apitypes.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -880,20 +1027,6 @@
         }
     },
     "definitions": {
-        "apitypes.Api": {
-            "type": "object",
-            "properties": {
-                "handler": {
-                    "type": "string"
-                },
-                "method": {
-                    "type": "string"
-                },
-                "path": {
-                    "type": "string"
-                }
-            }
-        },
         "apitypes.ApiCreateRequest": {
             "type": "object",
             "required": [
@@ -916,6 +1049,20 @@
                     ]
                 },
                 "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "apitypes.ApiInfo": {
+            "type": "object",
+            "properties": {
+                "handler": {
+                    "type": "string"
+                },
+                "method": {
                     "type": "string"
                 },
                 "path": {
@@ -965,6 +1112,27 @@
             "properties": {
                 "id": {
                     "type": "integer"
+                }
+            }
+        },
+        "apitypes.OAuthActivateRequest": {
+            "type": "object",
+            "required": [
+                "confirmPassword",
+                "id",
+                "password"
+            ],
+            "properties": {
+                "confirmPassword": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "id": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
                 }
             }
         },
@@ -1040,6 +1208,26 @@
                 },
                 "id": {
                     "type": "integer"
+                }
+            }
+        },
+        "apitypes.ServerApiData": {
+            "type": "object",
+            "properties": {
+                "apiInfo": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/apitypes.ApiInfo"
+                        }
+                    }
+                },
+                "apiType": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
