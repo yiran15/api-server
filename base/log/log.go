@@ -43,7 +43,7 @@ func NewLogger() {
 		EncodeCaller: zapcore.ShortCallerEncoder,
 	}
 	encoder = zapcore.NewJSONEncoder(config)
-	writer = zapcore.AddSync(os.Stderr)
+	writer = zapcore.AddSync(os.Stdout)
 
 	switch logLevelStr {
 	case "debug":

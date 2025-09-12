@@ -372,11 +372,13 @@ func (receiver *UserService) updateRole(ctx context.Context, req *apitypes.UserU
 		roleNames = append(roleNames, role.Name)
 	}
 
-	defer func() {
+	go func() {
 		time.Sleep(time.Second * 5)
-		if err := receiver.cacheStore.DelKey(ctx, store.RoleType, user.ID); err != nil {
+		if err := receiver.cacheStore.DelKey(context.TODO(), store.RoleType, user.ID); err != nil {
 			log.WithRequestID(ctx).Error("del role cache error", zap.Int64("userID", user.ID), zap.Any("roleNames", roleNames), zap.Error(err))
+			return
 		}
+		log.WithRequestID(ctx).Info("del role cache success", zap.Int64("userID", user.ID), zap.Any("roleNames", roleNames))
 	}()
 
 	return receiver.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil)
