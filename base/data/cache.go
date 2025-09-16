@@ -3,7 +3,6 @@ package data
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/yiran15/api-server/base/conf"
@@ -31,14 +30,23 @@ func initSingleRedis(ctx context.Context) (*redis.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	rdb := redis.NewClient(&redis.Options{
+
+	user := conf.GetRedisUser()
+
+	opts := &redis.Options{
 		Addr:            host,
 		Password:        password,
 		DB:              conf.GetRedisDB(),
 		PoolSize:        conf.GetRedisPoolSize(),
 		MinIdleConns:    conf.GetRedisMinIdleConns(),
 		ConnMaxLifetime: conf.GetRedisConnMaxLifetime(),
-	})
+	}
+
+	if user != "" {
+		opts.Username = user
+	}
+
+	rdb := redis.NewClient(opts)
 	err = rdb.Ping(ctx).Err()
 	if err != nil {
 		return nil, fmt.Errorf("redis connect failed: %w", err)
@@ -64,18 +72,23 @@ func initSentinelRedis(ctx context.Context) (*redis.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	rdb := redis.NewFailoverClient(&redis.FailoverOptions{
+	user := conf.GetRedisUser()
+	opts := &redis.FailoverOptions{
 		MasterName:       masterName,
 		SentinelAddrs:    sentinelHosts,
 		Password:         password,
 		SentinelPassword: sentPassword,
 		RouteByLatency:   true,
 		DB:               conf.GetRedisDB(),
-		PoolSize:         50,               // 最多50个连接
-		MinIdleConns:     20,               // 最少20个空闲连接
-		ConnMaxIdleTime:  10 * time.Minute, // 空闲 10 分钟关闭
-		ConnMaxLifetime:  30 * time.Minute, // 强制重连以避免连接老化
-	})
+		PoolSize:         conf.GetRedisPoolSize(),        // 最多50个连接
+		MinIdleConns:     conf.GetRedisMinIdleConns(),    // 最少20个空闲连接
+		ConnMaxLifetime:  conf.GetRedisConnMaxLifetime(), // 强制重连以避免连接老化
+	}
+	if user != "" {
+		opts.Username = user
+	}
+
+	rdb := redis.NewFailoverClient(opts)
 	err = rdb.Ping(ctx).Err()
 	if err != nil {
 		return nil, fmt.Errorf("redis sentinel connect failed: %w", err)

@@ -177,6 +177,10 @@ func GetRedisConnMaxLifetime() time.Duration {
 	return connMaxLifetime
 }
 
+func GetRedisUser() string {
+	return viper.GetString("redis.username")
+}
+
 func GetRedisPassword() (string, error) {
 	password := viper.GetString("redis.password")
 	if password == "" {
