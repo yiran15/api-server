@@ -432,15 +432,15 @@ func (receiver *UserService) OAuth2Callback(ctx context.Context, req *apitypes.O
 		if err != nil {
 			return nil, err
 		}
-		userID = feishuUser.User.ID
-		userName = feishuUser.User.Name
-		roles = feishuUser.User.Roles
+		if feishuUser == nil || feishuUser.User == nil {
+			return nil, errors.New("feishu user not found after login")
+		}
 		user = feishuUser.User
-		if *feishuUser.User.Status == model.UserStatusInactive {
-			return &apitypes.UserLoginResponse{
-				User:  user,
-				Token: "",
-			}, nil
+		userID = user.ID
+		userName = user.Name
+		roles = user.Roles
+		if user.Status != nil && *user.Status != model.UserStatusActive {
+			return &apitypes.UserLoginResponse{User: user, Token: ""}, nil
 		}
 
 	case *model.KeycloakUser:
@@ -448,16 +448,18 @@ func (receiver *UserService) OAuth2Callback(ctx context.Context, req *apitypes.O
 		if err != nil {
 			return nil, err
 		}
-		userID = u.ID
-		userName = u.Name
-		roles = u.Roles
-		user = u
-		if *u.Status == model.UserStatusInactive {
-			return &apitypes.UserLoginResponse{
-				User:  user,
-				Token: "",
-			}, nil
+		if u == nil {
+			return nil, errors.New("generic user not found after login")
 		}
+		user = u
+		userID = user.ID
+		userName = user.Name
+		roles = user.Roles
+		if user.Status != nil && *user.Status != model.UserStatusActive {
+			return &apitypes.UserLoginResponse{User: user, Token: ""}, nil
+		}
+	default:
+		return nil, errors.New("unsupported oauth user type")
 	}
 
 	token, err := receiver.jwt.GenerateToken(userID, userName)
@@ -465,29 +467,28 @@ func (receiver *UserService) OAuth2Callback(ctx context.Context, req *apitypes.O
 		return nil, err
 	}
 
-	if len(roles) == 0 {
+	roleNames := make([]any, 0, len(roles))
+	if len(roles) > 0 {
+		for _, r := range roles {
+			if r == nil {
+				continue
+			}
+			roleNames = append(roleNames, r.Name)
+		}
+	}
+
+	if len(roleNames) > 0 {
+		if err := receiver.cacheStore.SetSet(ctx, store.RoleType, userID, roleNames, nil); err != nil {
+			log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", userID), zap.Any("roles", roleNames), zap.Error(err))
+		}
+	} else {
+		// set a sentinel so other parts know user has no roles
 		if err := receiver.cacheStore.SetSet(ctx, store.RoleType, userID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
 			log.WithRequestID(ctx).Error("login set empty role cache error", zap.Int64("userID", userID), zap.Error(err))
 		}
-
-		return &apitypes.UserLoginResponse{
-			User:  user,
-			Token: token,
-		}, nil
 	}
 
-	roleNames := make([]any, 0, len(roles))
-	for _, role := range roles {
-		roleNames = append(roleNames, role.Name)
-	}
-	if err := receiver.cacheStore.SetSet(ctx, store.RoleType, userID, roleNames, nil); err != nil {
-		log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", userID), zap.Any("roles", roleNames), zap.Error(err))
-	}
-
-	return &apitypes.UserLoginResponse{
-		User:  user,
-		Token: token,
-	}, nil
+	return &apitypes.UserLoginResponse{User: user, Token: token}, nil
 }
 
 func (receiver *UserService) feishuLogin(ctx context.Context, userInfo *model.FeiShuUser) (*model.FeiShuUser, error) {

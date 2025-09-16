@@ -205,7 +205,17 @@ func (receiver *UserControllerImpl) OAuth2CallbackController(c *gin.Context) {
 		responseError(c, errors.New("state invalid"))
 		return
 	}
-	ctx := context.WithValue(c.Request.Context(), constant.ProviderContextKey, providerSession)
+	var providerStr string
+	if providerSession != nil {
+		if s, ok := providerSession.(string); ok {
+			providerStr = s
+		}
+	}
+	if providerStr == "" {
+		responseError(c, errors.New("provider is empty"))
+		return
+	}
+	ctx := context.WithValue(c.Request.Context(), constant.ProviderContextKey, providerStr)
 	c.Request = c.Request.WithContext(ctx)
 	ResponseWithData(c, receiver.userServicer.OAuth2Callback, bindTypeQuery)
 }
