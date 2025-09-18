@@ -86,6 +86,7 @@ func (m *Middleware) getRolesByUser(c *gin.Context, claims *jwt.JwtClaims) ([]st
 
 	if err := m.cacheImpl.SetSet(ctx, store.RoleType, claims.UserID, roleNames, nil); err != nil {
 		log.WithRequestID(ctx).Error("authz set role cache failed", zap.Error(err))
+		return nil, err
 	}
 
 	return roles, nil
