@@ -1,10 +1,26 @@
 services:
+  nginx:
+    image: registry.cn-beijing.aliyuncs.com/qqlx/nginx:1.28.0-otel
+    container_name: nginx-otel
+    environment:
+      - TZ="Asia/Shanghai"
+    cap_add:
+      - SYS_NICE
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/:/etc/nginx/conf.d/:ro
+      - ./nginx/cert/:/etc/nginx/cert:ro
+      - /data/html/:/data/html:ro
   apiserver:
-    image: registry.cn-beijing.aliyuncs.com/qqlx/api-server:feature-feishu-login-27eb237-20250903-233745
+    image: registry.cn-beijing.aliyuncs.com/qqlx/api-server:main-1a698df-20250918-155247
     restart: always
     container_name: apiserver
     # command: ["init"]
     environment:
+      - TZ="Asia/Shanghai"
       - SERVICE_NAME=api-server
       - API_SERVER_SERVER_BIND=:8080
       - API_SERVER_CONFIG_PATH=/app/config.yaml
@@ -19,12 +35,14 @@ services:
     volumes:
       - ./config.yaml:/app/config.yaml
 
-  redis1:
+  redis:
     image: registry.cn-beijing.aliyuncs.com/middleware1995/redis:7.2-alpine
-    container_name: redis1
+    container_name: redis
     restart: unless-stopped
+    ports:
+      - "6379:6379"
     volumes:
-      - redis-data1:/data
+      - redis-data:/data
     command: >
       redis-server
       --requirepass 123456
@@ -32,4 +50,4 @@ services:
       --save 86400 1
 
 volumes:
-  redis-data1:
+  redis-data:

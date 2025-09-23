@@ -17,7 +17,7 @@ mysql:
 redis:
   # single sentinel
   mode: single
-  host: 127.0.0.1:6379
+  host: redis:6379
   password: 123456
   # 过期时间 3s 3m 3h
   expireTime: 300s
