@@ -15,9 +15,9 @@ import (
 	"github.com/yiran15/api-server/controller"
 	"github.com/yiran15/api-server/pkg/casbin"
 	"github.com/yiran15/api-server/pkg/jwt"
-	localcache "github.com/yiran15/api-server/pkg/local_cache"
+	"github.com/yiran15/api-server/pkg/local_cache"
 	"github.com/yiran15/api-server/pkg/oauth"
-	v1 "github.com/yiran15/api-server/service/v1"
+	"github.com/yiran15/api-server/service/v1"
 	"github.com/yiran15/api-server/store"
 )
 

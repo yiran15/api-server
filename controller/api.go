@@ -102,5 +102,5 @@ func (receiver *apiController) ListApi(c *gin.Context) {
 // @Success 200 {object} apitypes.Response{data=apitypes.ServerApiData} "查询成功"
 // @Router /api/v1/api/serverApi [get]
 func (receiver *apiController) GetServerApi(c *gin.Context) {
-	c.JSON(http.StatusOK, apitypes.NewResponse(http.StatusOK, "success", requestid.Get(c), constant.ApiData))
+	c.JSON(http.StatusOK, apitypes.NewResponse(http.StatusOK, "success", requestid.Get(c), constant.ApiData, nil))
 }
