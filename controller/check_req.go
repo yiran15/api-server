@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/locales/zh"
@@ -33,12 +34,17 @@ func NewValidator() error {
 }
 
 // translateErrors 将验证错误翻译成更友好的格式
-func translateErrors(err error) map[string]string {
+func translateErrors(err error) string {
 	errs, ok := err.(validator.ValidationErrors)
 	if !ok {
-		return map[string]string{"error": err.Error()}
+		return err.Error()
 	}
-	return errs.Translate(trans)
+
+	var errMsg []string
+	for _, v := range errs.Translate(trans) {
+		errMsg = append(errMsg, v)
+	}
+	return strings.Join(errMsg, "; ")
 }
 
 // registerValidator 注册自定义验证器
