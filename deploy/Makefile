@@ -58,6 +58,6 @@ start:
 	docker compose up -d
 	@echo "--- 应用启动/更新完成 ---"
 
-
 # --- 组合目标 ---
-all: build push init start
+# all: build push init start
+start: init start

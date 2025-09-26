@@ -174,18 +174,40 @@ oauth2:
 ### 部署
 
 ```bash
-cd deploy
+# 构建前端资源
+git clone -b main https://github.com/yiran15/ui.git
+cd ui
+# 静态资源会拷贝到 /data/html/apiserver 目录下
+make deploy
 
+git clone -b main https://github.com/yiran15/api-server.git
+cd api-server/deploy
 # 初始化配置文件, 需要修改配置文件中的数据库信息
 mv config-example.yaml config.yaml
-
 # 初始化数据库
 mysql -h 127.0.0.1 -P 3306 -u root -p my_database < schema.sql
-
-# 构建镜像
-export DOCKER_USERNAME=xxx
-export DOCKER_PASSWORD=xxx
-
-# 构建并启动容器
-make all
+# 启动容器
+make start
 ```
+
+## 教程
+
+### 定位错误日志
+
+接口发送错误时通过 `requestId` 快速定位日志
+
+![错误展示](docs/img/error.png)
+
+```bash
+root@qqlx:~# docker logs nginx-otel | grep '8611cf16-493b-4e0f-8367-fb9b8647c5a1'
+{"@timestamp":"2025-09-27T09:41:23+00:00", "request_id":"8611cf16-493b-4e0f-8367-fb9b8647c5a1","trace_id":"7dee96370cfa5fb64f2c81438e1c98d2","client_ip":"221.219.176.189","method":"GET","uri":"/api/v1/user","args":"page=1&pageSize=10&status=0","status":"403","bytes_sent":90,"request_time":0.001,"upstream_time":"0.001","upstream_host":"172.18.0.2:8080","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"}
+
+
+root@qqlx:~# docker logs apiserver  | grep '8611cf16-493b-4e0f-8367-fb9b8647c5a1'
+{"level":"ERROR","time":"2025-09-27T17:41:23+08:00","caller":"middleware/authz.go:32","msg":"user has no roles","request-id":"8611cf16-493b-4e0f-8367-fb9b8647c5a1","userName":"胡云飞","trace_id":"7dee96370cfa5fb64f2c81438e1c98d2","span_id":"fa5abf963a87d297"}
+{"level":"ERROR","time":"2025-09-27T17:41:23+08:00","caller":"zap@v1.1.5/zap.go:121","msg":"access forbidden","status":403,"method":"GET","path":"/api/v1/user","query":"page=1&pageSize=10&status=0","ip":"221.219.176.189","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36","latency":0.000438359,"request-id":"8611cf16-493b-4e0f-8367-fb9b8647c5a1","trace_id":"7dee96370cfa5fb64f2c81438e1c98d2","span_id":"fa5abf963a87d297"}
+```
+
+链路信息
+
+![链路信息](docs/img/error-tempo.png)
