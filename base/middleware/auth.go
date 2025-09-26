@@ -7,9 +7,7 @@ import (
 
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
-	"github.com/yiran15/api-server/base/apitypes"
 	"github.com/yiran15/api-server/base/constant"
-	"github.com/yiran15/api-server/base/log"
 	"go.uber.org/zap"
 )
 
@@ -18,14 +16,14 @@ func (m *Middleware) Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.Request.Header.Get("Authorization")
 		if authHeader == "" {
-			log.WithRequestID(c.Request.Context()).Error("auth failed, no Authorization header")
+			zap.L().Error("auth failed, no Authorization header", zap.String("request-id", requestid.Get(c)))
 			m.Abort(c, http.StatusUnauthorized, constant.ErrAuthFailed)
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			log.WithRequestID(c.Request.Context()).Error("auth failed, invalid Authorization header")
+			zap.L().Error("auth failed, invalid Authorization header", zap.String("request-id", requestid.Get(c)))
 			m.Abort(c, http.StatusUnauthorized, constant.ErrAuthFailed)
 			return
 		}
@@ -33,7 +31,7 @@ func (m *Middleware) Auth() gin.HandlerFunc {
 		tokenString := parts[1]
 		mc, err := m.jwtImpl.ParseToken(tokenString)
 		if err != nil {
-			log.WithRequestID(c.Request.Context()).Error("auth failed, parse token failed", zap.Error(err))
+			zap.L().Error("auth failed, parse token failed", zap.String("request-id", requestid.Get(c)), zap.Error(err))
 			m.Abort(c, http.StatusUnauthorized, constant.ErrAuthFailed)
 			return
 		}
@@ -41,15 +39,4 @@ func (m *Middleware) Auth() gin.HandlerFunc {
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
-}
-
-func (m *Middleware) Abort(c *gin.Context, code int, err error) {
-	switch code {
-	case http.StatusUnauthorized:
-		c.JSON(code, apitypes.NewResponse(code, "unauthorized", requestid.Get(c), nil, err))
-	case http.StatusForbidden:
-		c.JSON(code, apitypes.NewResponse(code, "forbidden", requestid.Get(c), nil, err))
-	}
-	c.Error(err)
-	c.Abort()
 }
