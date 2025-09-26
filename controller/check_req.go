@@ -1,12 +1,11 @@
 package controller
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/locales/zh"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
@@ -15,96 +14,54 @@ import (
 )
 
 var (
-	trans    ut.Translator
-	validate *Validator
+	trans ut.Translator
 )
 
-type CheckReqInterface interface {
-	CheckReq(ctx context.Context, value any) (errMsg string, err error)
-}
-
-type Validator struct {
-	validate *validator.Validate
-}
-
+// NewValidator 初始化自定义验证器和翻译器
 func NewValidator() error {
-	v := validator.New()
 	zhTrans := zh.New()
 	uni := ut.New(zhTrans, zhTrans)
 	trans, _ = uni.GetTranslator("zh")
-	if err := zh_translations.RegisterDefaultTranslations(v, trans); err != nil {
-		return fmt.Errorf("register default translations failed: %w", err)
-	}
-	if err := registerValidator(v, trans); err != nil {
-		return fmt.Errorf("register validator failed: %w", err)
-	}
-	validate = &Validator{
-		validate: v,
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		if err := zh_translations.RegisterDefaultTranslations(v, trans); err != nil {
+			return fmt.Errorf("register default translations failed: %w", err)
+		}
+		if err := registerValidator(v); err != nil {
+			return fmt.Errorf("register validator failed: %w", err)
+		}
 	}
 	return nil
 }
 
-func (receiver *Validator) CheckReq(ctx context.Context, value any) (errMsg string, err error) {
-	err = receiver.validate.Struct(value)
-	if err == nil {
-		return "", nil
+// translateErrors 将验证错误翻译成更友好的格式
+func translateErrors(err error) string {
+	errs, ok := err.(validator.ValidationErrors)
+	if !ok {
+		return err.Error()
 	}
 
-	var valErrors validator.ValidationErrors
-	if !errors.As(err, &valErrors) {
-		return "", errors.New("validate check exception")
+	var errMsg []string
+	for _, v := range errs.Translate(trans) {
+		errMsg = append(errMsg, v)
 	}
-
-	// 使用翻译器
-	msgArr := make([]string, 0, len(valErrors))
-	for _, e := range valErrors {
-		msg := e.Translate(trans)
-		msgArr = append(msgArr, msg)
-	}
-
-	return strings.Join(msgArr, "; "), nil
+	return strings.Join(errMsg, "; ")
 }
 
-func registerValidator(v *validator.Validate, trans ut.Translator) error {
-	if err := v.RegisterValidation("user_list", userListValidator); err != nil {
-		return fmt.Errorf("register user_list validator failed: %w", err)
+// registerValidator 注册自定义验证器
+func registerValidator(v *validator.Validate) error {
+	if err := registerUserList(v); err != nil {
+		return err
 	}
-	err := v.RegisterTranslation("user_list", trans,
-		func(ut ut.Translator) error {
-			return ut.Add("user_list", "email、mobile 和 name 中最多只能有一个字段非空", true)
-		},
-		func(ut ut.Translator, fe validator.FieldError) string {
-			t, _ := ut.T("user_list", fe.Field())
-			return t
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("register user_list translation failed: %w", err)
+	if err := registerMobile(v); err != nil {
+		return err
 	}
-
-	if err := v.RegisterValidation("mobile", mobileValidator); err != nil {
-		return fmt.Errorf("register mobile validator failed: %w", err)
-	}
-	if err := v.RegisterTranslation("mobile", trans,
-		func(ut ut.Translator) error {
-			return ut.Add("mobile", "{0} 必须是有效的中国大陆手机号码", true)
-		},
-		func(ut ut.Translator, fe validator.FieldError) string {
-			t, _ := ut.T("mobile", fe.Field())
-			return t
-		},
-	); err != nil {
-		return fmt.Errorf("register mobile translation failed: %w", err)
-	}
-
 	return nil
 }
 
-func userListValidator(fl validator.FieldLevel) bool {
-	// 获取整个结构体
+var userListValidator validator.Func = func(fl validator.FieldLevel) bool {
 	user, ok := fl.Parent().Interface().(apitypes.UserListRequest)
 	if !ok {
-		return false // 如果类型断言失败，返回验证失败
+		return false
 	}
 
 	var count int
@@ -120,9 +77,47 @@ func userListValidator(fl validator.FieldLevel) bool {
 	return count <= 1
 }
 
+func registerUserList(v *validator.Validate) error {
+	if err := v.RegisterValidation("user_list", userListValidator); err != nil {
+		return fmt.Errorf("register user_list validator failed: %w", err)
+	}
+
+	if err := v.RegisterTranslation("user_list", trans,
+		func(ut ut.Translator) error {
+			return ut.Add("user_list", "email、mobile 和 name 中最多只能有一个字段非空", true)
+		},
+		func(ut ut.Translator, fe validator.FieldError) string {
+			t, _ := ut.T("user_list", fe.Field())
+			return t
+		},
+	); err != nil {
+		return fmt.Errorf("register user_list translation failed: %w", err)
+	}
+	return nil
+}
+
 var mobileRegex = regexp.MustCompile(`^1[3-9]\d{9}$`)
 
-func mobileValidator(fl validator.FieldLevel) bool {
+var mobileValidator = func(fl validator.FieldLevel) bool {
 	field := fl.Field().String()
 	return mobileRegex.MatchString(field)
+}
+
+func registerMobile(v *validator.Validate) error {
+	if err := v.RegisterValidation("mobile", mobileValidator); err != nil {
+		return fmt.Errorf("register mobile validator failed: %w", err)
+	}
+
+	if err := v.RegisterTranslation("mobile", trans,
+		func(ut ut.Translator) error {
+			return ut.Add("mobile", "{0} 必须是有效的中国大陆手机号码", true)
+		},
+		func(ut ut.Translator, fe validator.FieldError) string {
+			t, _ := ut.T("mobile", fe.Field())
+			return t
+		},
+	); err != nil {
+		return fmt.Errorf("register mobile translation failed: %w", err)
+	}
+	return nil
 }

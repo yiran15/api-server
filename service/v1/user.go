@@ -76,11 +76,13 @@ func (receiver *UserService) Login(ctx context.Context, req *apitypes.UserLoginR
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
-		return nil, errors.New("user not found")
+		log.WithRequestID(ctx).Error("login failed, user not found", zap.String("email", req.Email))
+		return nil, constant.ErrLoginFailed
 	}
 
 	if !receiver.checkPasswordHash(req.Password, user.Password) {
-		return nil, errors.New("invalid password")
+		log.WithRequestID(ctx).Error("login failed, invalid password", zap.String("email", req.Email))
+		return nil, constant.ErrLoginFailed
 	}
 	token, err := receiver.jwt.GenerateToken(user.ID, user.Name)
 	if err != nil {

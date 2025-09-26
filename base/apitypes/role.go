@@ -3,7 +3,7 @@ package apitypes
 import "github.com/yiran15/api-server/model"
 
 type RoleCreateRequest struct {
-	Name        string  `json:"name" validate:"required,ascii"`
+	Name        string  `json:"name" binding:"required,ascii"`
 	Description string  `json:"description"`
 	Apis        []int64 `json:"apis"`
 }

@@ -43,19 +43,9 @@ func bindWithSources(c *gin.Context, req any, sources ...bindType) (success bool
 				responseParamError(c, err, "request body is empty")
 				return false
 			}
-			responseParamError(c, err, err.Error())
+			responseParamError(c, err, translateErrors(err))
 			return false
 		}
-	}
-
-	errMsg, err := validate.CheckReq(c.Request.Context(), req)
-	if err != nil {
-		responseParamError(c, err, errMsg)
-		return false
-	}
-	if len(errMsg) > 0 {
-		responseParamError(c, errors.New("parameter error"), errMsg)
-		return false
 	}
 
 	requestID := requestid.Get(c)
@@ -130,17 +120,17 @@ func ResponseNoBind(c *gin.Context, handler HandlerErrNoBind) {
 
 func responseError(c *gin.Context, err error) {
 	code, err := getErr(err)
-	c.JSON(code, apitypes.NewResponse(code, err.Error(), requestid.Get(c), nil))
-	_ = c.Error(err)
+	c.JSON(code, apitypes.NewResponse(code, "", requestid.Get(c), nil, err.Error()))
+	c.Error(err)
 }
 
 func responseSuccess(c *gin.Context, data any) {
-	c.JSON(http.StatusOK, apitypes.NewResponse(0, "success", requestid.Get(c), data))
+	c.JSON(http.StatusOK, apitypes.NewResponse(0, "success", requestid.Get(c), data, nil))
 }
 
-func responseParamError(c *gin.Context, err error, errMsg string) {
-	c.JSON(http.StatusBadRequest, apitypes.NewResponse(http.StatusBadRequest, "parameter error", requestid.Get(c), errMsg))
-	_ = c.Error(err)
+func responseParamError(c *gin.Context, err error, errors any) {
+	c.JSON(http.StatusBadRequest, apitypes.NewResponse(http.StatusBadRequest, "parameter error", requestid.Get(c), nil, errors))
+	c.Error(err)
 }
 
 func getErr(err error) (int, error) {
