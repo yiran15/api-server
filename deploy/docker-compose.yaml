@@ -15,7 +15,7 @@ services:
       - ./nginx/cert/:/etc/nginx/cert:ro
       - /data/html/:/data/html:ro
   apiserver:
-    image: registry.cn-beijing.aliyuncs.com/qqlx/api-server:main-1a698df-20250918-155247
+    image: ghcr.io/yiran15/api-server:latest
     restart: always
     container_name: apiserver
     # command: ["init"]

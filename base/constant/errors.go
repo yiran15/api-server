@@ -6,6 +6,6 @@ import (
 
 var (
 	ErrAuthFailed   = errors.New("auth failed")
-	ErrNoPermission = errors.New("no permission")
+	ErrNoPermission = errors.New("access forbidden")
 	ErrLoginFailed  = errors.New("incorrect username or password")
 )

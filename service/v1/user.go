@@ -93,14 +93,14 @@ func (receiver *UserService) Login(ctx context.Context, req *apitypes.UserLoginR
 		if err := receiver.cacheStore.SetSet(ctx, store.RoleType, user.ID, []any{constant.EmptyRoleSentinel}, nil); err != nil {
 			log.WithRequestID(ctx).Error("login set empty role cache error", zap.Int64("userID", user.ID), zap.Error(err))
 		}
-	}
-
-	roleNames := make([]any, 0, len(user.Roles))
-	for _, role := range user.Roles {
-		roleNames = append(roleNames, role.Name)
-	}
-	if err := receiver.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil); err != nil {
-		log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", user.ID), zap.Any("roles", roleNames), zap.Error(err))
+	} else {
+		roleNames := make([]any, 0, len(user.Roles))
+		for _, role := range user.Roles {
+			roleNames = append(roleNames, role.Name)
+		}
+		if err := receiver.cacheStore.SetSet(ctx, store.RoleType, user.ID, roleNames, nil); err != nil {
+			log.WithRequestID(ctx).Error("login set role cache error", zap.Int64("userID", user.ID), zap.Any("roles", roleNames), zap.Error(err))
+		}
 	}
 
 	return &apitypes.UserLoginResponse{

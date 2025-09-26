@@ -120,16 +120,16 @@ func ResponseNoBind(c *gin.Context, handler HandlerErrNoBind) {
 
 func responseError(c *gin.Context, err error) {
 	code, err := getErr(err)
-	c.JSON(code, apitypes.NewResponse(code, "", requestid.Get(c), nil, err.Error()))
+	c.JSON(code, apitypes.NewResponseWithOpts(code, apitypes.WithError(err.Error())))
 	c.Error(err)
 }
 
 func responseSuccess(c *gin.Context, data any) {
-	c.JSON(http.StatusOK, apitypes.NewResponse(0, "success", requestid.Get(c), data, nil))
+	c.JSON(http.StatusOK, apitypes.NewResponseWithOpts(0, apitypes.WithMsg("success"), apitypes.WithData(data)))
 }
 
-func responseParamError(c *gin.Context, err error, errors any) {
-	c.JSON(http.StatusBadRequest, apitypes.NewResponse(http.StatusBadRequest, "parameter error", requestid.Get(c), nil, errors))
+func responseParamError(c *gin.Context, err error, errors string) {
+	c.JSON(http.StatusBadRequest, apitypes.NewResponseWithOpts(http.StatusBadRequest, apitypes.WithMsg("parameter error"), apitypes.WithError(errors)))
 	c.Error(err)
 }
 
