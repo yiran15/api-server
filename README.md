@@ -182,10 +182,12 @@ mv config-example.yaml config.yaml
 # 初始化数据库
 mysql -h 127.0.0.1 -P 3306 -u root -p my_database < schema.sql
 
-# 构建镜像
-export DOCKER_USERNAME=xxx
-export DOCKER_PASSWORD=xxx
+# 构建前端资源
+git clone -b main https://github.com/yiran15/ui.git
+cd ui
+# 静态资源会拷贝到 /data/html/apiserver 目录下
+make deploy
 
-# 构建并启动容器
-make all
+# 启动容器
+make start
 ```

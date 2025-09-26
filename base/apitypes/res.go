@@ -8,12 +8,12 @@ type Response struct {
 	Error     any    `json:"error,omitempty"`
 }
 
-func NewResponse(code int, msg, requestId string, data any, error any) *Response {
+func NewResponse(code int, msg, requestId string, data any, errAny any) *Response {
 	return &Response{
 		Code:      code,
 		Msg:       msg,
 		Data:      data,
 		RequestId: requestId,
-		Error:     error,
+		Error:     errAny,
 	}
 }
