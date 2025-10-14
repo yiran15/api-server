@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -73,7 +74,7 @@ func (c *CacheStore) GetSet(ctx context.Context, cacheType CacheType, cacheKey a
 		return nil, err
 	}
 
-	saveKey := fmt.Sprintf("%s:%v:%s", c.keyPrefix, cacheType, key)
+	saveKey := c.buildCacheKey(cacheType, key)
 	result, err := c.client.SMembers(ctx, saveKey).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -85,20 +86,29 @@ func (c *CacheStore) GetSet(ctx context.Context, cacheType CacheType, cacheKey a
 }
 
 func (c *CacheStore) SetSet(ctx context.Context, cacheType CacheType, cacheKey any, cacheValue []any, expireTime *time.Duration) error {
+	if cacheValue == nil {
+		return fmt.Errorf("cacheValue cannot be nil")
+	}
+
 	key, err := c.NormalizeCacheKey(cacheKey)
 	if err != nil {
 		return err
 	}
 
-	saveKey := fmt.Sprintf("%s:%v:%s", c.keyPrefix, cacheType, key)
-	if err := c.client.SAdd(ctx, saveKey, cacheValue...).Err(); err != nil {
-		return fmt.Errorf("redis setSet error: %w", err)
-	}
-
+	saveKey := c.buildCacheKey(cacheType, key)
 	if expireTime != nil {
-		if err := c.client.Expire(ctx, saveKey, *expireTime).Err(); err != nil {
+		// 使用事务确保SADD和EXPIRE的原子性
+		pipe := c.client.TxPipeline()
+		pipe.SAdd(ctx, saveKey, cacheValue...)
+		pipe.Expire(ctx, saveKey, *expireTime)
+
+		if _, err := pipe.Exec(ctx); err != nil {
 			return fmt.Errorf("redis setSet error: %w", err)
 		}
+	}
+
+	if err := c.client.SAdd(ctx, saveKey, cacheValue...).Err(); err != nil {
+		return fmt.Errorf("redis setSet error: %w", err)
 	}
 	return nil
 }
@@ -112,10 +122,21 @@ func (c *CacheStore) DelKey(ctx context.Context, cacheType CacheType, cacheKey a
 	if err != nil {
 		return err
 	}
-
-	saveKey := fmt.Sprintf("%s:%v:%s", c.keyPrefix, cacheType, key)
-	if err := c.client.Del(ctx, saveKey).Err(); err != nil {
+	delKey := c.buildCacheKey(cacheType, key)
+	if err := c.client.Del(ctx, delKey).Err(); err != nil {
 		return fmt.Errorf("redis delKey error: %w", err)
 	}
 	return nil
+}
+
+// 新增辅助方法用于构建缓存key，提高可读性和可测试性
+func (c *CacheStore) buildCacheKey(cacheType CacheType, key string) string {
+	var sb strings.Builder
+	sb.Grow(len(c.keyPrefix) + 1 + len(cacheType) + 1 + len(key))
+	sb.WriteString(c.keyPrefix)
+	sb.WriteByte(':')
+	sb.WriteString(string(cacheType))
+	sb.WriteByte(':')
+	sb.WriteString(key)
+	return sb.String()
 }
