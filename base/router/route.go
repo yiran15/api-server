@@ -65,6 +65,12 @@ func (r *Router) RegisterRouter(engine *gin.Engine) {
 	engine.Use(requestid.New())
 
 	apiGroup := engine.Group("/api/v1")
+	apiGroup.GET("/healthz", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status": "ok",
+		})
+	})
+
 	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.registerOAuthRouter(apiGroup)
 	r.registerUserRouter(apiGroup)
